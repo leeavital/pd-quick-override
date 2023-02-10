@@ -17,6 +17,7 @@ where
         stdin.write("\n".as_bytes())?;
     }
 
+    // TODO: check exit code in case the user did a ctrl-C
     subprocess.wait()?;
 
     let mut stdout = subprocess.stdout.unwrap();

@@ -10,9 +10,9 @@ mod client;
 #[tokio::main]
 async fn main() {
 
-    let client = Client::new();
+    let client = Client::new().expect("could not open pagerduty client");
 
-    if false {
+    if true {
         
         let users  = client.get_users().await.expect("could not load users!");
         let mut users_by_email = HashMap::new();
