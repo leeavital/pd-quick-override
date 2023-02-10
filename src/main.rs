@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use client::Client;
+
 
 mod fuzzyselect;
 mod client;
@@ -8,8 +10,11 @@ mod client;
 #[tokio::main]
 async fn main() {
 
+    let client = Client::new();
+
     if false {
-        let users  = client::get_users().await.expect("could not load users!");
+        
+        let users  = client.get_users().await.expect("could not load users!");
         let mut users_by_email = HashMap::new();
         users.users.into_iter().for_each(|u| {
             users_by_email.insert(u.email.clone(), u);
