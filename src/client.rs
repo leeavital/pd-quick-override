@@ -13,10 +13,6 @@ pub struct User {
 
 
 pub async fn get_users() -> reqwest::Result<UserResponse> {
-
-    // let res = reqwest::get("https://httpbin.org/ip")
-    //     .await?;
-
     let client = reqwest::Client::new();
     let resp = client.get("https://api.pagerduty.com/users")
         .header("Authorization", "Token token=y_NbAkKc66ryYTWUXYEu")
