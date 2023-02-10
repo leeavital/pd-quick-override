@@ -2,13 +2,13 @@ use serde::{Deserialize};
 
 #[derive(Deserialize, Debug)]
 pub struct UserResponse {
-    users: Vec<User>,
+    pub users: Vec<User>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct User {
-    id: String,
-    email: String,
+    pub id: String,
+    pub email: String,
 }
 
 

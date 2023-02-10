@@ -1,24 +1,30 @@
-use std::{process::{Command, self, Stdio}, io::{Write, self, Read}};
+use std::{process::{Command, Stdio}, io::{Write, self, Read}, collections::HashMap};
 
 
 
-pub fn select(ss: Vec<String>) -> io::Result<String> {
+pub fn select<T>(ss: HashMap<String, T>) -> io::Result<T>
+where
+    T: Clone 
+{
     let mut subprocess = Command::new("fzf")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()?;
 
     let stdin = subprocess.stdin.as_mut().unwrap();
-    for s in ss {
-        stdin.write(s.as_bytes())?;
+    for (k, _v) in &ss {
+        stdin.write(k.as_bytes())?;
         stdin.write("\n".as_bytes())?;
     }
 
     subprocess.wait()?;
 
     let mut stdout = subprocess.stdout.unwrap();
-    let mut output = String::new();
-    stdout.read_to_string(&mut output)?;
+    let mut selected_key = String::new();
+    stdout.read_to_string(&mut selected_key)?;
 
-    return Ok(output);
+    selected_key.truncate(selected_key.trim().len());
+
+    let value = ss.get(&selected_key).unwrap().clone();
+    return Ok(value);
 }

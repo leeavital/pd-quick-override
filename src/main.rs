@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 
 mod fuzzyselect;
 mod client;
@@ -5,12 +7,13 @@ mod client;
 
 #[tokio::main]
 async fn main() {
-    let r = vec![String::from("hello"), String::from("goodbye")];
+    let users  = client::get_users().await.expect("could not load users!");
 
-    let u = client::get_users().await;
+    let mut users_by_email = HashMap::new();
+    users.users.into_iter().for_each(|u| {
+        users_by_email.insert(u.email.clone(), u);
+    });
 
-    println!("{:?}", u.unwrap());
-
-    let s = fuzzyselect::select(r).expect("could not read it");
-    print!("{s}");
+    let s = fuzzyselect::select(users_by_email).expect("could not read it");
+    println!("{:?}", s);
 }
