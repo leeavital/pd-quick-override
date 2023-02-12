@@ -4,6 +4,7 @@ use std::{
     process::{Command, Stdio},
 };
 
+// TODO: can this work on &T to avoid the need to clone?
 pub fn select<T>(ss: HashMap<String, T>) -> io::Result<T>
 where
     T: Clone,

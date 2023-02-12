@@ -26,7 +26,10 @@ pub fn parse(
         return get_ranges_with_base(base, range_parts[1]);
     }
 
-    return Ok((dt, dt));
+    return Err(ParseError{
+        reason: ParseErrorReason::Other,
+        source: Some(String::from(range_str)),
+    });
 }
 
 fn get_ranges_with_base(
@@ -99,6 +102,7 @@ pub enum ParseErrorReason {
     UnrecognizedDate,
     UnrecognizedTimeRange,
     IllegalTime,
+    Other,
 }
 
 #[derive(Debug)]

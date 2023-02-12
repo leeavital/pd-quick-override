@@ -20,17 +20,17 @@ pub struct User {
 #[derive(Deserialize, Debug, Clone)]
 #[allow(dead_code)]
 pub struct SchedulesResponse {
-    schedules: Vec<Schedule>,
-    more: bool,
-    limit: i32,
-    offset: i32,
+    pub schedules: Vec<Schedule>,
+    pub more: bool,
+    pub limit: i32,
+    pub offset: i32,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 #[allow(dead_code)]
 pub struct Schedule {
-    id: String,
-    name: String,
+    pub id: String,
+    pub name: String,
 }
 
 pub struct Client {
@@ -76,7 +76,6 @@ impl Client {
 
             let resp = self.add_common_headers(req).send().await?;
             let users = resp.json::<UserResponse>().await?;
-            println!("more: {:?}", &users);
             for u in users.users {
                 all_users.push(u);
             }
@@ -88,7 +87,7 @@ impl Client {
         }
     }
 
-    pub async fn get_schedules(&self) -> reqwest::Result<SchedulesResponse> {
+    pub async fn get_schedules(&self) -> reqwest::Result<Vec<Schedule>> {
         // TODO: pagination
         let client = reqwest::Client::new();
 
@@ -96,7 +95,7 @@ impl Client {
 
         let resp = self.add_common_headers(req).send().await?;
         let schedules = resp.json::<SchedulesResponse>().await?;
-        return Ok(schedules);
+        return Ok(schedules.schedules);
     }
 
     fn add_common_headers(&self, req: RequestBuilder) -> RequestBuilder {
