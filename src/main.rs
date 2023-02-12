@@ -1,16 +1,17 @@
 use std::{
     collections::HashMap,
-    io::{self, Read, Write},
-    vec,
+    io::{self, Write},
 };
+use std::error::Error;
 
 use chrono::TimeZone;
-use clap::{Args, Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 use client::Client;
 
 mod client;
 mod fuzzyselect;
 mod timeparse;
+mod persistence;
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -34,6 +35,8 @@ enum Commands {
 async fn main() {
     let cli = Cli::parse();
 
+
+
     match cli.command {
         Commands::Create { at } => {
             let tz: chrono_tz::Tz = "America/New_York".parse().unwrap();
@@ -47,24 +50,16 @@ async fn main() {
             println!("parsed {} to: {} {}", at, to, from);
 
             let client = Client::new().expect("could not open pagerduty client");
-
-            let s = client.get_schedules().await.unwrap();
-            println!("{:?}", s);
-
-            let (users, mut schedules) = tokio::join!(client.get_users(), client.get_schedules(),);
+            let db = persistence::Database::load(&client).await.expect("could not load database");
 
             let mut users_by_email = HashMap::new();
-            users.unwrap().into_iter().for_each(|u| {
+            db.storage.users.into_iter().for_each(|u| {
                 users_by_email.insert(u.email.clone(), u);
             });
             let selected_user = fuzzyselect::select(users_by_email).expect("could not read it");
 
-            schedules = Ok(vec![client::Schedule {
-                id: "testing".to_string(),
-                name: "testing_name".to_string(),
-            }]);
             let mut schedules_by_name = HashMap::new();
-            schedules.unwrap().into_iter().for_each(|s| {
+            db.storage.schedules.into_iter().for_each(|s| {
                 schedules_by_name.insert(s.name.clone(), s);
             });
             let selected_schedule =
