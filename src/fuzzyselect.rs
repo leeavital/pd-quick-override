@@ -1,10 +1,12 @@
-use std::{process::{Command, Stdio}, io::{Write, self, Read}, collections::HashMap};
-
-
+use std::{
+    collections::HashMap,
+    io::{self, Read, Write},
+    process::{Command, Stdio},
+};
 
 pub fn select<T>(ss: HashMap<String, T>) -> io::Result<T>
 where
-    T: Clone 
+    T: Clone,
 {
     let mut subprocess = Command::new("fzf")
         .stdin(Stdio::piped())
