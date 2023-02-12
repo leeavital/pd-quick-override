@@ -26,7 +26,7 @@ pub fn parse(
         return get_ranges_with_base(base, range_parts[1]);
     }
 
-    return Err(ParseError{
+    return Err(ParseError {
         reason: ParseErrorReason::Other,
         source: Some(String::from(range_str)),
     });
