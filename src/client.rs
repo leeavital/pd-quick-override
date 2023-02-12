@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc, TimeZone};
+use chrono::{DateTime, TimeZone};
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 use std::{io, vec, fmt::Display};
@@ -12,7 +12,7 @@ pub struct UserResponse {
     offset: i32,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, Serialize)]
 pub struct User {
     pub id: String,
     pub email: String,
@@ -27,7 +27,7 @@ pub struct SchedulesResponse {
     pub offset: i32,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[allow(dead_code)]
 pub struct Schedule {
     pub id: String,
@@ -99,6 +99,10 @@ impl Client {
                 all_users.push(u);
             }
 
+            if all_users.len() > 0 {
+                return Ok(all_users); // TODO
+            }
+
             offset += users.limit;
             if !users.more {
                 return Ok(all_users);
@@ -110,11 +114,24 @@ impl Client {
         // TODO: pagination
         let client = reqwest::Client::new();
 
-        let req = client.get("https://api.pagerduty.com/schedules");
+        let mut all_schedules = Vec::new();
+        let mut offset  = 0;
+        loop {
+            let req = client.get("https://api.pagerduty.com/schedules")
+                .query(&[("offset", offset)]); // TODO: page limit
+            let resp = self.add_common_headers(req).send().await?;
+            let schedules = resp.json::<SchedulesResponse>().await?;
+            offset += schedules.limit;
+            all_schedules.extend(schedules.schedules);
 
-        let resp = self.add_common_headers(req).send().await?;
-        let schedules = resp.json::<SchedulesResponse>().await?;
-        return Ok(schedules.schedules);
+            if !schedules.more {
+                return Ok(all_schedules);
+            } 
+            if all_schedules.len() > 100 {
+                return Ok(all_schedules);
+            }
+
+        }
     }
 
     pub async fn create_schedule_override<Tz, O>(&self, u: User, s: Schedule, from: DateTime<Tz>, to: DateTime<Tz>) -> reqwest::Result<()>
