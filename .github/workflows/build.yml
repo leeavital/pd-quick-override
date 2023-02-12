@@ -1,0 +1,13 @@
+name: Build And Test
+run-name: ${{ github.actor }} is running tests
+
+on: [push]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build
+    - name: Test
+      run: cargo test --verbose
