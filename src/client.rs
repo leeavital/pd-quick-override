@@ -101,10 +101,6 @@ impl Client {
                 all_users.push(u);
             }
 
-            if all_users.len() > 0 {
-                return Ok(all_users); // TODO
-            }
-
             offset += users.limit;
             if !users.more {
                 return Ok(all_users);
@@ -118,9 +114,10 @@ impl Client {
 
         let mut all_schedules = Vec::new();
         let mut offset  = 0;
+        let page_size = 100;
         loop {
             let req = client.get("https://api.pagerduty.com/schedules")
-                .query(&[("offset", offset)]); // TODO: page limit
+                .query(&[("offset", offset), ("limit", page_size)]);
             let resp = self.add_common_headers(req).send().await?;
             let schedules = resp.json::<SchedulesResponse>().await?;
             offset += schedules.limit;
@@ -129,10 +126,6 @@ impl Client {
             if !schedules.more {
                 return Ok(all_schedules);
             } 
-            if all_schedules.len() > 100 {
-                return Ok(all_schedules);
-            }
-
         }
     }
 
