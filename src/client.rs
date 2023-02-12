@@ -87,11 +87,13 @@ impl Client {
 
         let mut offset = 0;
 
+        let page_size = 100;
+
         let mut all_users = Vec::new();
         loop {
             let req = client
                 .get("https://api.pagerduty.com/users")
-                .query(&[("offset", offset)]);
+                .query(&[("offset", offset), ("limit", page_size)]);
 
             let resp = self.add_common_headers(req).send().await?;
             let users = resp.json::<UserResponse>().await?;
