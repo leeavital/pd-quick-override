@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     io::{self, Write},
 };
-use std::error::Error;
+
 
 use chrono::TimeZone;
 use clap::{Parser, Subcommand};

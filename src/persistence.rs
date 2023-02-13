@@ -1,8 +1,8 @@
 
-use std::{path::{PathBuf, Path}, error::Error};
+use std::{path::{PathBuf}, error::Error};
 
 use chrono::{Utc};
-use dirs::home_dir;
+
 use serde::{Deserialize, Serialize};
 use tokio::{join, io::{AsyncWriteExt, AsyncReadExt}};
 
@@ -37,7 +37,7 @@ impl <'a> Database<'a> {
         };
         if !storage_file.exists() {
             println!("doing remote load...");
-            db.do_remote_load().await;
+            db.do_remote_load().await?;
             return Ok(db);
         } else {
             println!("loading state from file");
@@ -46,24 +46,22 @@ impl <'a> Database<'a> {
         return  Ok(db);
     }
 
-    async fn schedule_refresh_if_needed(&mut self) -> () {
-        todo!();
-    }
-
-    async fn do_remote_load(&mut self) {
+    async fn do_remote_load(&mut self) -> Result<(), Box<dyn Error>> {
         let users = self.client.get_users();
         let schedules = self.client.get_schedules();
 
         let (r_users, r_schedules) = join!(users, schedules);
 
-        let users = r_users.expect("could not load users");
-        let schedules = r_schedules.expect("could not load schedules");
+        let users = r_users?;
+        let schedules = r_schedules?;
 
         self.storage = Serialized{
             schedules, users, updated_at: Utc::now().timestamp(),
         };
 
-        self.write_to_disk().await;
+        self.write_to_disk().await?;
+
+        return Ok(());
     }
 
     fn get_storage_file() -> PathBuf {
