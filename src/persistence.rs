@@ -1,10 +1,10 @@
 use std::{
     error::Error,
-    path::{Path, PathBuf},
+    path::{PathBuf},
 };
 
 use chrono::Utc;
-use dirs::home_dir;
+
 use serde::{Deserialize, Serialize};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -43,17 +43,13 @@ impl<'a> Database<'a> {
         };
         if !storage_file.exists() {
             println!("doing remote load...");
-            db.do_remote_load().await;
+            db.do_remote_load().await?;
             return Ok(db);
         } else {
             println!("loading state from file");
             db.do_file_load().await?;
         }
         return Ok(db);
-    }
-
-    async fn schedule_refresh_if_needed(&mut self) -> () {
-        todo!();
     }
 
     async fn do_remote_load(&mut self) -> Result<(), Box<dyn Error>> {
