@@ -1,6 +1,6 @@
 use std::{error::Error, fmt::Display, ops::Add};
 
-use chrono::{Duration, DurationRound, TimeZone, Timelike};
+use chrono::{Duration, DurationRound, Timelike};
 
 use chrono::DateTime;
 use chrono_tz::Tz;
@@ -13,10 +13,6 @@ pub fn parse(
     now: DateTime<Tz>,
     range_str: &str,
 ) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
-    let dt = tz
-        .with_ymd_and_hms(2022, 12, 30, 10, 30, 0)
-        .single()
-        .unwrap();
 
     let range_parts: Vec<&str> = range_str.split(",").collect();
 

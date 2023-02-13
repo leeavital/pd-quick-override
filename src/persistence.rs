@@ -1,8 +1,8 @@
 
-use std::{path::{PathBuf, Path}, error::Error};
+use std::{path::{PathBuf}, error::Error};
 
 use chrono::{Utc};
-use dirs::home_dir;
+
 use serde::{Deserialize, Serialize};
 use tokio::{join, io::{AsyncWriteExt, AsyncReadExt}};
 
@@ -46,10 +46,6 @@ impl <'a> Database<'a> {
         return  Ok(db);
     }
 
-    async fn schedule_refresh_if_needed(&mut self) -> () {
-        todo!();
-    }
-
     async fn do_remote_load(&mut self) {
         let users = self.client.get_users();
         let schedules = self.client.get_schedules();
@@ -63,7 +59,7 @@ impl <'a> Database<'a> {
             schedules, users, updated_at: Utc::now().timestamp(),
         };
 
-        self.write_to_disk().await;
+        self.write_to_disk().await.unwrap();
     }
 
     fn get_storage_file() -> PathBuf {
