@@ -1,7 +1,7 @@
 use chrono::{DateTime, TimeZone};
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
-use std::{io, vec, fmt::Display};
+use std::{fmt::Display, io, vec};
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
@@ -113,10 +113,11 @@ impl Client {
         let client = reqwest::Client::new();
 
         let mut all_schedules = Vec::new();
-        let mut offset  = 0;
+        let mut offset = 0;
         let page_size = 100;
         loop {
-            let req = client.get("https://api.pagerduty.com/schedules")
+            let req = client
+                .get("https://api.pagerduty.com/schedules")
                 .query(&[("offset", offset), ("limit", page_size)]);
             let resp = self.add_common_headers(req).send().await?;
             let schedules = resp.json::<SchedulesResponse>().await?;
@@ -125,39 +126,44 @@ impl Client {
 
             if !schedules.more {
                 return Ok(all_schedules);
-            } 
+            }
         }
     }
 
-    pub async fn create_schedule_override<Tz, O>(&self, u: User, s: Schedule, from: DateTime<Tz>, to: DateTime<Tz>) -> reqwest::Result<()>
-    where 
-        Tz : TimeZone<Offset = O>,
-        O : Display
+    pub async fn create_schedule_override<Tz, O>(
+        &self,
+        u: User,
+        s: Schedule,
+        from: DateTime<Tz>,
+        to: DateTime<Tz>,
+    ) -> reqwest::Result<()>
+    where
+        Tz: TimeZone<Offset = O>,
+        O: Display,
     {
-    
-        let override_request = ScheduleOverrideRequest{
-            overrides: vec![
-                ScheduleOverride{
-                    start: from.to_rfc3339(),
-                    end: to.to_rfc3339(),
-                    user: UserRef {
-                        id: u.id, 
-                        r#type: "user_reference".to_string(),
-                    },
+        let override_request = ScheduleOverrideRequest {
+            overrides: vec![ScheduleOverride {
+                start: from.to_rfc3339(),
+                end: to.to_rfc3339(),
+                user: UserRef {
+                    id: u.id,
+                    r#type: "user_reference".to_string(),
                 },
-            ],
+            }],
         };
 
         let client = reqwest::Client::new();
-        let req = client.post(format!("https://api.pagerduty.com/schedules/{}/overrides", s.id));
+        let req = client.post(format!(
+            "https://api.pagerduty.com/schedules/{}/overrides",
+            s.id
+        ));
         let r2 = self.add_common_headers(req).json(&override_request);
 
         println!("{:?}", r2);
 
         r2.send().await?;
 
-        return  Ok(());
-
+        return Ok(());
     }
 
     fn add_common_headers(&self, req: RequestBuilder) -> RequestBuilder {

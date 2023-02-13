@@ -1,8 +1,8 @@
+use std::error::Error;
 use std::{
     collections::HashMap,
     io::{self, Write},
 };
-use std::error::Error;
 
 use chrono::TimeZone;
 use clap::{Parser, Subcommand};
@@ -10,8 +10,8 @@ use client::Client;
 
 mod client;
 mod fuzzyselect;
-mod timeparse;
 mod persistence;
+mod timeparse;
 
 #[derive(Debug, Parser)]
 struct Cli {
@@ -26,16 +26,12 @@ enum Commands {
         #[arg(short, long)]
         at: String,
     },
-    ResetApiKey {
-        
-    },
+    ResetApiKey {},
 }
 
 #[tokio::main]
 async fn main() {
     let cli = Cli::parse();
-
-
 
     match cli.command {
         Commands::Create { at } => {
@@ -50,7 +46,9 @@ async fn main() {
             println!("parsed {} to: {} {}", at, to, from);
 
             let client = Client::new().expect("could not open pagerduty client");
-            let db = persistence::Database::load(&client).await.expect("could not load database");
+            let db = persistence::Database::load(&client)
+                .await
+                .expect("could not load database");
 
             let mut users_by_email = HashMap::new();
             db.storage.users.into_iter().for_each(|u| {
@@ -67,12 +65,15 @@ async fn main() {
 
             println!("will create override on user {:?} for schedule {:?} from {} to {}, confirm to continue", selected_user, selected_schedule, from, to );
             if confirm() {
-                client.create_schedule_override(selected_user, selected_schedule, from, to).await.expect("could not create override");
+                client
+                    .create_schedule_override(selected_user, selected_schedule, from, to)
+                    .await
+                    .expect("could not create override");
             }
-        },
-        Commands::ResetApiKey {} => { 
+        }
+        Commands::ResetApiKey {} => {
             todo!();
-        },
+        }
     }
 }
 

@@ -1,14 +1,17 @@
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+};
 
-use std::{path::{PathBuf, Path}, error::Error};
-
-use chrono::{Utc};
+use chrono::Utc;
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};
-use tokio::{join, io::{AsyncWriteExt, AsyncReadExt}};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    join,
+};
 
-use crate::client::{self, User, Schedule};
-
-
+use crate::client::{self, Schedule, User};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Serialized {
@@ -17,23 +20,26 @@ pub struct Serialized {
     pub updated_at: i64, // in seconds
 }
 
-pub struct  Database<'a> {
+pub struct Database<'a> {
     client: &'a client::Client,
     pub storage: Serialized,
 }
 
-
-impl <'a> Database<'a> {
-    pub async fn load(client:  &'a client::Client) -> Result<Database<'a>, Box<dyn Error>> {
+impl<'a> Database<'a> {
+    pub async fn load(client: &'a client::Client) -> Result<Database<'a>, Box<dyn Error>> {
         let storage_dir = Self::get_storage_dir();
         if !storage_dir.exists() {
-            std::fs::create_dir_all(storage_dir).expect("could not create directory");
+            std::fs::create_dir_all(storage_dir)?;
         }
 
         let storage_file = Self::get_storage_file();
-        let mut db = Database{
+        let mut db = Database {
             client,
-            storage: Serialized { users: Vec::new(), schedules: Vec::new(), updated_at: 0 },
+            storage: Serialized {
+                users: Vec::new(),
+                schedules: Vec::new(),
+                updated_at: 0,
+            },
         };
         if !storage_file.exists() {
             println!("doing remote load...");
@@ -43,31 +49,35 @@ impl <'a> Database<'a> {
             println!("loading state from file");
             db.do_file_load().await?;
         }
-        return  Ok(db);
+        return Ok(db);
     }
 
     async fn schedule_refresh_if_needed(&mut self) -> () {
         todo!();
     }
 
-    async fn do_remote_load(&mut self) {
+    async fn do_remote_load(&mut self) -> Result<(), Box<dyn Error>> {
         let users = self.client.get_users();
         let schedules = self.client.get_schedules();
 
         let (r_users, r_schedules) = join!(users, schedules);
 
-        let users = r_users.expect("could not load users");
-        let schedules = r_schedules.expect("could not load schedules");
+        let users = r_users?;
+        let schedules = r_schedules?;
 
-        self.storage = Serialized{
-            schedules, users, updated_at: Utc::now().timestamp(),
+        self.storage = Serialized {
+            schedules,
+            users,
+            updated_at: Utc::now().timestamp(),
         };
 
-        self.write_to_disk().await;
+        self.write_to_disk().await?;
+
+        return Ok(());
     }
 
     fn get_storage_file() -> PathBuf {
-        let mut dir = Self::get_storage_dir(); 
+        let mut dir = Self::get_storage_dir();
         dir.push("storage.json");
         return dir;
     }
@@ -95,7 +105,7 @@ impl <'a> Database<'a> {
         let mut out = String::new();
         f.read_to_string(&mut out).await?;
 
-        let parsed : Serialized = serde_json::from_str(out.as_str())?;
+        let parsed: Serialized = serde_json::from_str(out.as_str())?;
 
         self.storage = parsed;
         return Ok(());
