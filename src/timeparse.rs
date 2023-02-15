@@ -58,7 +58,11 @@ fn parse_single_time(base: DateTime<Tz>, timestr: &str) -> Result<DateTime<Tz>, 
     let mut hour: u32 = caps.name("h").unwrap().as_str().parse().unwrap();
 
     match caps.name("m").unwrap().as_str() {
-        "am" => {}
+        "am" => {
+            if hour == 12 {
+                hour = 0
+            }
+        }
         "pm" => {
             if hour != 12 {
                 hour = hour + 12
@@ -159,5 +163,10 @@ mod testing {
         run_test("today, 11am-12pm",
             Utc.with_ymd_and_hms(2023, 2, 11, 16, 0, 0),
             Utc.with_ymd_and_hms(2023, 2, 11, 17, 0, 0));
+
+        run_test("today, 12am-1am",
+            Utc.with_ymd_and_hms(2023, 2, 11, 5, 0, 0),
+            Utc.with_ymd_and_hms(2023, 2, 11, 6, 0, 0));
+
     }
 }
