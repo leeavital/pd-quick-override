@@ -42,12 +42,11 @@ async fn main() {
             let tz: chrono_tz::Tz = "America/New_York".parse().unwrap();
             let now = chrono::Utc::now().timestamp();
             tz.timestamp_opt(now, 0).unwrap();
-            let (to, from) = timeparse::parse(tz, tz.timestamp_opt(now, 0).unwrap(), at.as_str())
+            let (from, to) = timeparse::parse(tz, tz.timestamp_opt(now, 0).unwrap(), at.as_str())
                 .unwrap_or_else(|e| {
                     println!("cannot parse: {}", e);
                     std::process::exit(1);
                 });
-            println!("parsed {} to: {} {}", at, to, from);
 
             let client = Client::new().expect("could not open pagerduty client");
             let db = persistence::Database::load(&client).await.expect("could not load database");
@@ -65,7 +64,7 @@ async fn main() {
             let selected_schedule =
                 fuzzyselect::select(schedules_by_name).expect("could not read it");
 
-            println!("will create override on user {:?} for schedule {:?} from {} to {}, confirm to continue", selected_user, selected_schedule, from, to );
+            println!("will create override on user {} for schedule {:?} from {} to {}, confirm to continue", selected_user, selected_schedule, from, to );
             if confirm() {
                 client.create_schedule_override(selected_user, selected_schedule, from, to).await.expect("could not create override");
             }

@@ -58,8 +58,16 @@ fn parse_single_time(base: DateTime<Tz>, timestr: &str) -> Result<DateTime<Tz>, 
     let mut hour: u32 = caps.name("h").unwrap().as_str().parse().unwrap();
 
     match caps.name("m").unwrap().as_str() {
-        "am" => {}
-        "pm" => hour = hour + 12,
+        "am" => {
+            if hour == 12 {
+                hour = 0
+            }
+        }
+        "pm" => {
+            if hour != 12 {
+                hour = hour + 12
+            }
+        },
         _ => unreachable!("prevented by regex"),
     }
     return Ok(base.with_hour(hour).unwrap());
@@ -128,6 +136,8 @@ mod testing {
     #[test]
     fn test_me() {
         let tz: Tz = "America/New_York".parse().unwrap();
+        
+        // UCT-5
         let now = tz.with_ymd_and_hms(2023, 2, 11, 12, 0, 0).unwrap();
 
         let run_test =
@@ -149,5 +159,14 @@ mod testing {
             Utc.with_ymd_and_hms(2023, 2, 11, 14, 0, 0),
             Utc.with_ymd_and_hms(2023, 2, 12, 2, 0, 0),
         );
+
+        run_test("today, 11am-12pm",
+            Utc.with_ymd_and_hms(2023, 2, 11, 16, 0, 0),
+            Utc.with_ymd_and_hms(2023, 2, 11, 17, 0, 0));
+
+        run_test("today, 12am-1am",
+            Utc.with_ymd_and_hms(2023, 2, 11, 5, 0, 0),
+            Utc.with_ymd_and_hms(2023, 2, 11, 6, 0, 0));
+
     }
 }

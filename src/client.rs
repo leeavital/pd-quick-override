@@ -1,7 +1,7 @@
 use chrono::{DateTime, TimeZone};
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
-use std::{io, vec, fmt::Display};
+use std::{io, vec, fmt::{Display, Write}};
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
@@ -16,6 +16,16 @@ pub struct UserResponse {
 pub struct User {
     pub id: String,
     pub email: String,
+}
+
+impl Display for User {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.email.as_str())?;
+        f.write_str(" (")?;
+        f.write_str(self.id.as_str())?;
+        f.write_str(")")?;
+        return Ok(());
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
