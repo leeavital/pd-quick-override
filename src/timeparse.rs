@@ -5,12 +5,8 @@ use chrono::{Duration, DurationRound, Timelike};
 use chrono::{DateTime, TimeZone};
 use chrono_tz::Tz;
 
-<<<<<<< Updated upstream
 // TODO: use references for DateTime wherever possible?
 
-#[allow(dead_code)]
-=======
->>>>>>> Stashed changes
 pub fn parse(
     tz: Tz,
     now: DateTime<Tz>,
