@@ -42,7 +42,7 @@ async fn main() {
             let tz: chrono_tz::Tz = "America/New_York".parse().unwrap();
             let now = chrono::Utc::now().timestamp();
             tz.timestamp_opt(now, 0).unwrap();
-            let (from, to) = timeparse::parse(tz, tz.timestamp_opt(now, 0).unwrap(), at.as_str())
+            let (from, to) = timeparse::parse(&tz.timestamp_opt(now, 0).unwrap(), at.as_str())
                 .unwrap_or_else(|e| {
                     println!("cannot parse: {}", e);
                     std::process::exit(1);

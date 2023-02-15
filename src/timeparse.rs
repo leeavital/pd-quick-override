@@ -7,17 +7,15 @@ use chrono_tz::Tz;
 
 // TODO: use references for DateTime wherever possible?
 
-#[allow(dead_code)]
 pub fn parse(
-    tz: Tz,
-    now: DateTime<Tz>,
+    now: &DateTime<Tz>,
     range_str: &str,
 ) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
 
     let range_parts: Vec<&str> = range_str.split(",").collect();
 
     if range_parts.len() == 2 {
-        let base = get_base_date(tz, now, range_parts[0])?;
+        let base = get_base_date(now, range_parts[0])?;
 
         return get_ranges_with_base(base, range_parts[1]);
     }
@@ -73,7 +71,7 @@ fn parse_single_time(base: DateTime<Tz>, timestr: &str) -> Result<DateTime<Tz>, 
     return Ok(base.with_hour(hour).unwrap());
 }
 
-fn get_base_date(_tz: Tz, now: DateTime<Tz>, range_str: &str) -> Result<DateTime<Tz>, ParseError> {
+fn get_base_date(now: &DateTime<Tz>, range_str: &str) -> Result<DateTime<Tz>, ParseError> {
     if range_str.starts_with("tomorrow") {
         let base_date = now
             .add(chrono::Duration::days(1))
@@ -143,7 +141,7 @@ mod testing {
         let run_test =
             |s: &str, from: LocalResult<DateTime<Utc>>, to: LocalResult<DateTime<Utc>>| {
                 let (parsed_from, parsed_to) =
-                    parse(tz, now, s).expect(format!("expected to parse {:?}", s).as_str());
+                    parse(&now, s).expect(format!("expected to parse {:?}", s).as_str());
                 assert_eq!(parsed_from.timestamp(), from.unwrap().timestamp());
                 assert_eq!(parsed_to.timestamp(), to.unwrap().timestamp());
             };
