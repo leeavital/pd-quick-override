@@ -25,6 +25,9 @@ enum Commands {
     Create {
         #[arg(short, long)]
         at: String,
+        
+        #[arg(short, long)]
+        me: bool,
     },
     ResetApiKey {
         
@@ -38,7 +41,7 @@ async fn main() {
 
 
     match cli.command {
-        Commands::Create { at } => {
+        Commands::Create { at, me } => {
             let tz: chrono_tz::Tz = "America/New_York".parse().unwrap();
             let now = chrono::Utc::now().timestamp();
             tz.timestamp_opt(now, 0).unwrap();
@@ -55,7 +58,12 @@ async fn main() {
             db.storage.users.into_iter().for_each(|u| {
                 users_by_email.insert(u.email.clone(), u);
             });
-            let selected_user = fuzzyselect::select(users_by_email).expect("could not read it");
+
+            let selected_user = if me {
+                client.get_me().await.unwrap()
+            } else {
+                fuzzyselect::select(users_by_email).expect("could not read it")
+            };
 
             let mut schedules_by_name = HashMap::new();
             db.storage.schedules.into_iter().for_each(|s| {
