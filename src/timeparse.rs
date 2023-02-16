@@ -50,25 +50,37 @@ fn parse_single_time(base: DateTime<Tz>, timestr: &str) -> Result<DateTime<Tz>, 
         source: Some(String::from(timestr)),
     };
 
-    let r = regex::Regex::new(r"(?P<h>\d\d?)(:\d\d)?\s*(?P<m>am|pm)?").expect("could not compile");
+    let r = regex::Regex::new(r"(?P<h>\d\d?)(:(?P<m>\d\d))?\s*(?P<me>am|pm)").expect("could not compile");
     let caps = r.captures(timestr).ok_or(error)?;
 
     let mut hour: u32 = caps.name("h").unwrap().as_str().parse().unwrap();
 
-    match caps.name("m").unwrap().as_str() {
-        "am" => {
+    match caps.name("me").map(|meridiem| meridiem.as_str()) {
+        Some("am") => {
             if hour == 12 {
                 hour = 0
             }
-        }
-        "pm" => {
+        },
+        Some("pm") => {
             if hour != 12 {
                 hour = hour + 12
             }
         },
-        _ => unreachable!("prevented by regex"),
+        None => unreachable!("prevented by regex (none)"),
+        Some(e) => unreachable!("prevented by regex {e}"),
     }
-    return Ok(base.with_hour(hour).unwrap());
+
+
+    let mut minute = 0;
+    match caps.name("m") {
+        Some(minute_s) => {
+            minute = minute_s.as_str().trim_start_matches(":").parse().unwrap();
+        },
+        None => {},
+    }
+
+
+    return Ok(base.with_hour(hour).unwrap().with_minute(minute).unwrap());
 }
 
 fn get_base_date(now: &DateTime<Tz>, range_str: &str) -> Result<DateTime<Tz>, ParseError> {
@@ -165,6 +177,10 @@ mod testing {
         run_test("today, 12am-1am",
             Utc.with_ymd_and_hms(2023, 2, 11, 5, 0, 0),
             Utc.with_ymd_and_hms(2023, 2, 11, 6, 0, 0));
+
+        run_test("today, 12:00am-01:30am",
+            Utc.with_ymd_and_hms(2023, 2, 11, 5, 0, 0),
+            Utc.with_ymd_and_hms(2023, 2, 11, 6, 30, 0));
 
     }
 }
