@@ -1155,6 +1155,7 @@ dependencies = [
  "chrono-tz",
  "clap",
  "dirs",
+ "iana-time-zone",
  "keyring",
  "regex",
  "reqwest",
