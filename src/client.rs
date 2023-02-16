@@ -1,7 +1,7 @@
 use chrono::{DateTime, TimeZone};
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
-use std::{io, vec, fmt::{Display, Write}};
+use std::{io, vec, fmt::{Display}};
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]

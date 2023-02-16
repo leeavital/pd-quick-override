@@ -1,8 +1,10 @@
 use std::{error::Error, fmt::Display, ops::Add};
 
+#[allow(unused)]
+use chrono::TimeZone;
 use chrono::{Duration, DurationRound, Timelike};
 
-use chrono::{DateTime, TimeZone};
+use chrono::{DateTime};
 use chrono_tz::Tz;
 
 // TODO: use references for DateTime wherever possible?
