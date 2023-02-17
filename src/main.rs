@@ -4,6 +4,8 @@ use std::{
 };
 
 
+
+
 use chrono::TimeZone;
 use clap::{Parser, Subcommand};
 use client::Client;
@@ -28,6 +30,9 @@ enum Commands {
         
         #[arg(short, long)]
         me: bool,
+
+        #[arg(short, long)]
+        time_zone: Option<String>,
     },
     ResetApiKey {
         
@@ -39,10 +44,14 @@ async fn main() {
     let cli = Cli::parse();
 
 
-
     match cli.command {
-        Commands::Create { at, me } => {
-            let tz: chrono_tz::Tz = "America/New_York".parse().unwrap();
+        Commands::Create { at , time_zone , me } => {
+            let tz_string = time_zone.unwrap_or_else(|| {
+                iana_time_zone::get_timezone().expect("could not find timezone")
+            });
+
+            let tz: chrono_tz::Tz = tz_string.parse().unwrap();
+            
             let now = chrono::Utc::now().timestamp();
             tz.timestamp_opt(now, 0).unwrap();
             let (from, to) = timeparse::parse(&tz.timestamp_opt(now, 0).unwrap(), at.as_str())
