@@ -10,13 +10,19 @@ This is a tool to quickly create pagerduty overrides from the command line.
 
 ## usage: create
 
+
+Create overrides for the current day:
+
 ```
 pd-quick-override create --at 'today, 4pm-5pm'
 pd-quick-override create --at 'today, 4:30pm-5:30pm'
 ```
 
-Creates an override from 4pm to 5pm.
+Create an override for yourself:
 
+```
+pd-quick-override create --me --at 'today, 4:30pm-5:30pm'
+```
 
 
 ## usage: reset-api-key

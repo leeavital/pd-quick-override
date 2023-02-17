@@ -1,7 +1,7 @@
 use chrono::{DateTime, TimeZone};
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
-use std::{io, vec, fmt::{Display, Write}};
+use std::{io, vec, fmt::{Display}};
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
@@ -10,6 +10,11 @@ pub struct UserResponse {
     more: bool,
     limit: i32,
     offset: i32,
+}
+
+#[derive(Deserialize, Debug)]
+struct MeResponse {
+    user: User,
 }
 
 #[derive(Deserialize, Debug, Clone, Serialize)]
@@ -119,7 +124,6 @@ impl Client {
     }
 
     pub async fn get_schedules(&self) -> reqwest::Result<Vec<Schedule>> {
-        // TODO: pagination
         let client = reqwest::Client::new();
 
         let mut all_schedules = Vec::new();
@@ -137,6 +141,17 @@ impl Client {
                 return Ok(all_schedules);
             } 
         }
+    }
+
+    pub async fn get_me(&self) -> reqwest::Result<User> {
+        let client = reqwest::Client::new();
+        let req = client.get("https://api.pagerduty.com/users/me");
+        let resp = self.add_common_headers(req).send().await?;
+        let user = resp.json::<MeResponse>().await?;
+
+        return Ok(user.user);
+
+
     }
 
     pub async fn create_schedule_override<Tz, O>(&self, u: User, s: Schedule, from: DateTime<Tz>, to: DateTime<Tz>) -> reqwest::Result<()>
