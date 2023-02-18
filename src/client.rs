@@ -1,7 +1,7 @@
 use chrono::{DateTime, TimeZone};
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
-use std::{io, vec, fmt::{Display}};
+use std::{io, vec, fmt::{Display, Write}};
 
 #[derive(Deserialize, Debug)]
 #[allow(dead_code)]
@@ -47,6 +47,15 @@ pub struct SchedulesResponse {
 pub struct Schedule {
     pub id: String,
     pub name: String,
+}
+
+impl  Display for Schedule {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.name.as_str())?;
+        f.write_str(" (")?;
+        f.write_str(self.id.as_str())?;
+        return f.write_char(')');
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -154,7 +163,7 @@ impl Client {
 
     }
 
-    pub async fn create_schedule_override<Tz, O>(&self, u: User, s: Schedule, from: DateTime<Tz>, to: DateTime<Tz>) -> reqwest::Result<()>
+    pub async fn create_schedule_override<Tz, O>(&self, u: &User, s: &Schedule, from: DateTime<Tz>, to: DateTime<Tz>) -> reqwest::Result<()>
     where 
         Tz : TimeZone<Offset = O>,
         O : Display
@@ -166,7 +175,7 @@ impl Client {
                     start: from.to_rfc3339(),
                     end: to.to_rfc3339(),
                     user: UserRef {
-                        id: u.id, 
+                        id: u.id.clone(),
                         r#type: "user_reference".to_string(),
                     },
                 },
@@ -176,8 +185,6 @@ impl Client {
         let client = reqwest::Client::new();
         let req = client.post(format!("https://api.pagerduty.com/schedules/{}/overrides", s.id));
         let r2 = self.add_common_headers(req).json(&override_request);
-
-        println!("{:?}", r2);
 
         r2.send().await?;
 

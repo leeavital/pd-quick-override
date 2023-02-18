@@ -4,8 +4,6 @@ use std::{
 };
 
 
-
-
 use chrono::TimeZone;
 use clap::{Parser, Subcommand};
 use client::Client;
@@ -43,7 +41,6 @@ enum Commands {
 async fn main() {
     let cli = Cli::parse();
 
-
     match cli.command {
         Commands::Create { at , time_zone , me } => {
             let tz_string = time_zone.unwrap_or_else(|| {
@@ -64,26 +61,29 @@ async fn main() {
             let db = persistence::Database::load(&client).await.expect("could not load database");
 
             let mut users_by_email = HashMap::new();
-            db.storage.users.into_iter().for_each(|u| {
+            db.storage.users.iter().for_each(|u| {
                 users_by_email.insert(u.email.clone(), u);
             });
 
+            let current_user;
             let selected_user = if me {
-                client.get_me().await.unwrap()
+                current_user =  client.get_me().await.unwrap();
+                &current_user
             } else {
                 fuzzyselect::select(users_by_email).expect("could not read it")
             };
 
             let mut schedules_by_name = HashMap::new();
-            db.storage.schedules.into_iter().for_each(|s| {
+            db.storage.schedules.iter().for_each(|s| {
                 schedules_by_name.insert(s.name.clone(), s);
             });
             let selected_schedule =
                 fuzzyselect::select(schedules_by_name).expect("could not read it");
 
-            println!("will create override on user {} for schedule {:?} from {} to {}, confirm to continue", selected_user, selected_schedule, from, to );
+            println!("will create override on user {selected_user} for schedule {selected_schedule} from {from} to {to}, confirm to continue");
             if confirm() {
                 client.create_schedule_override(selected_user, selected_schedule, from, to).await.expect("could not create override");
+                println!("Override created! Good luck! ")
             }
         },
         Commands::ResetApiKey {} => { 
