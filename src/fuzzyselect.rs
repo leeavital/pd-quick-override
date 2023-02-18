@@ -1,11 +1,11 @@
 use std::{
     collections::HashMap,
     io::{self, Read, Write},
-    process::{Command, Stdio},
+    process::{Command, Stdio}, ops::Deref,
 };
 
 // TODO: can this work on &T to avoid the need to clone?
-pub fn select<T>(ss: HashMap<String, &T>) -> io::Result<&T>
+pub fn select<'a, T>(ss: &'a HashMap<String, &T>) -> io::Result<&'a T>
 where
     T: Clone,
 {
@@ -15,9 +15,9 @@ where
         .spawn()?;
 
     let stdin = subprocess.stdin.as_mut().unwrap();
-    for (k, _v) in &ss {
-        stdin.write(k.as_bytes())?;
-        stdin.write("\n".as_bytes())?;
+    for k  in ss.keys() {
+        stdin.write_all(k.as_bytes())?;
+        stdin.write_all("\n".as_bytes())?;
     }
 
     // TODO: check exit code in case the user did a ctrl-C
@@ -29,6 +29,6 @@ where
 
     selected_key.truncate(selected_key.trim().len());
 
-    let value = ss.get(&selected_key).unwrap().clone();
-    return Ok(value);
+    let value= ss.get(&selected_key).unwrap().deref();
+    Ok(value)
 }

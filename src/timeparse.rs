@@ -14,7 +14,7 @@ pub fn parse(
     range_str: &str,
 ) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
 
-    let range_parts: Vec<&str> = range_str.split(",").collect();
+    let range_parts: Vec<&str> = range_str.split(',').collect();
 
     if range_parts.len() == 2 {
         let base = get_base_date(now, range_parts[0])?;
@@ -22,28 +22,28 @@ pub fn parse(
         return get_ranges_with_base(base, range_parts[1]);
     }
 
-    return Err(ParseError {
+    Err(ParseError {
         reason: ParseErrorReason::Other,
         source: Some(String::from(range_str)),
-    });
+    })
 }
 
 fn get_ranges_with_base(
     base: DateTime<Tz>,
     range_parts: &str,
 ) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
-    if range_parts.contains("-") {
-        let parts: Vec<&str> = range_parts.split("-").collect();
+    if range_parts.contains('-') {
+        let parts: Vec<&str> = range_parts.split('-').collect();
         let start = parse_single_time(base, parts[0])?;
         let end = parse_single_time(base, parts[1])?;
 
         return Ok((start, end));
     }
 
-    return Err(ParseError {
+    Err(ParseError {
         reason: ParseErrorReason::UnrecognizedTimeRange,
         source: Some(String::from(range_parts)),
-    });
+    })
 }
 
 fn parse_single_time(base: DateTime<Tz>, timestr: &str) -> Result<DateTime<Tz>, ParseError> {
@@ -65,7 +65,7 @@ fn parse_single_time(base: DateTime<Tz>, timestr: &str) -> Result<DateTime<Tz>, 
         },
         Some("pm") => {
             if hour != 12 {
-                hour = hour + 12
+                hour += 12
             }
         },
         None => unreachable!("prevented by regex (none)"),
@@ -74,15 +74,12 @@ fn parse_single_time(base: DateTime<Tz>, timestr: &str) -> Result<DateTime<Tz>, 
 
 
     let mut minute = 0;
-    match caps.name("m") {
-        Some(minute_s) => {
-            minute = minute_s.as_str().trim_start_matches(":").parse().unwrap();
-        },
-        None => {},
+    if let Some(minute_s) = caps.name("m") {
+        minute = minute_s.as_str().trim_start_matches(':').parse().unwrap();
     }
 
 
-    return Ok(base.with_hour(hour).unwrap().with_minute(minute).unwrap());
+    Ok(base.with_hour(hour).unwrap().with_minute(minute).unwrap())
 }
 
 fn get_base_date(now: &DateTime<Tz>, range_str: &str) -> Result<DateTime<Tz>, ParseError> {
@@ -107,10 +104,10 @@ fn get_base_date(now: &DateTime<Tz>, range_str: &str) -> Result<DateTime<Tz>, Pa
 
     // TODO: exact dates
 
-    return Err(ParseError {
+    Err(ParseError {
         reason: ParseErrorReason::UnrecognizedDate,
         source: Some(String::from(range_str)),
-    });
+    })
 }
 
 #[derive(Debug)]
@@ -132,10 +129,10 @@ impl Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("encountered error code: {:?}", self.reason))?;
 
-        match self.source.as_ref() {
-            Some(s) => f.write_fmt(format_args!(" on input {:?}", s))?,
-            None => {}
+        if let Some(s) = self.source.as_ref() {
+            f.write_fmt(format_args!(" on input {:?}", s))?
         }
+
         Ok(())
     }
 }
