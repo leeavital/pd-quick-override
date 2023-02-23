@@ -29,7 +29,7 @@ impl Display for User {
         f.write_str(" (")?;
         f.write_str(self.id.as_str())?;
         f.write_str(")")?;
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -54,7 +54,7 @@ impl  Display for Schedule {
         f.write_str(self.name.as_str())?;
         f.write_str(" (")?;
         f.write_str(self.id.as_str())?;
-        return f.write_char(')');
+        f.write_char(')')
     }
 }
 
@@ -84,7 +84,7 @@ impl Client {
     pub fn new() -> std::result::Result<Client, Box<dyn std::error::Error>> {
         let api_key = Self::get_api_key()?;
 
-        return Ok(Client { api_key });
+        Ok(Client { api_key })
     }
 
     fn get_api_key() -> std::result::Result<String, Box<dyn std::error::Error>> {
@@ -100,9 +100,9 @@ impl Client {
                 keyring_entry.set_password(prompt.trim())?;
 
                 // TODO: avoid clone
-                return Ok(String::from(prompt.trim()));
+                Ok(String::from(prompt.trim()))
             }
-            Err(e) => return Err(Box::from(e)),
+            Err(e) => Err(Box::from(e)),
         }
     }
 
@@ -158,9 +158,7 @@ impl Client {
         let resp = self.add_common_headers(req).send().await?;
         let user = resp.json::<MeResponse>().await?;
 
-        return Ok(user.user);
-
-
+        Ok(user.user)
     }
 
     pub async fn create_schedule_override<Tz, O>(&self, u: &User, s: &Schedule, from: DateTime<Tz>, to: DateTime<Tz>) -> reqwest::Result<()>
@@ -188,7 +186,7 @@ impl Client {
 
         r2.send().await?;
 
-        return  Ok(());
+        Ok(())
 
     }
 
@@ -196,9 +194,9 @@ impl Client {
         let mut api_key_value = String::from("Token token=");
         api_key_value.push_str(&self.api_key);
 
-        return req
+        req
             .header("Authorization", api_key_value)
             .header("Accept", "application/vnd.pagerduty+json;version=2")
-            .header("Content-Type", "application/json");
+            .header("Content-Type", "application/json")
     }
 }

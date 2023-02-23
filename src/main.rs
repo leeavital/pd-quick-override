@@ -33,7 +33,7 @@ enum Commands {
         time_zone: Option<String>,
     },
     ResetApiKey {
-        
+
     },
 }
 
@@ -70,7 +70,7 @@ async fn main() {
                 current_user =  client.get_me().await.unwrap();
                 &current_user
             } else {
-                fuzzyselect::select(users_by_email).expect("could not read it")
+                fuzzyselect::select(&users_by_email).expect("could not read it")
             };
 
             let mut schedules_by_name = HashMap::new();
@@ -78,7 +78,7 @@ async fn main() {
                 schedules_by_name.insert(s.name.clone(), s);
             });
             let selected_schedule =
-                fuzzyselect::select(schedules_by_name).expect("could not read it");
+                fuzzyselect::select(&schedules_by_name).expect("could not read it");
 
             println!("will create override on user {selected_user} for schedule {selected_schedule} from {from} to {to}, confirm to continue");
             if confirm() {

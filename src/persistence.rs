@@ -43,7 +43,8 @@ impl <'a> Database<'a> {
             println!("loading state from file");
             db.do_file_load().await?;
         }
-        return  Ok(db);
+
+        Ok(db)
     }
 
     async fn do_remote_load(&mut self) -> Result<(), Box<dyn Error>> {
@@ -61,19 +62,21 @@ impl <'a> Database<'a> {
 
         self.write_to_disk().await?;
 
-        return Ok(());
+        Ok(())
     }
 
     fn get_storage_file() -> PathBuf {
         let mut dir = Self::get_storage_dir(); 
         dir.push("storage.json");
-        return dir;
+        
+        dir
     }
 
     fn get_storage_dir() -> PathBuf {
         let mut home = dirs::home_dir().expect("could not find home directory");
         home.push(".pd-quick-override");
-        return home;
+        
+        home
     }
 
     async fn write_to_disk(&self) -> Result<(), Box<dyn Error>> {
@@ -84,7 +87,7 @@ impl <'a> Database<'a> {
         file.write_all(jstring.as_bytes()).await?;
         file.flush().await?;
 
-        return Ok(());
+        Ok(())
     }
 
     pub async fn do_file_load(&mut self) -> Result<(), Box<dyn std::error::Error>> {
@@ -96,6 +99,7 @@ impl <'a> Database<'a> {
         let parsed : Serialized = serde_json::from_str(out.as_str())?;
 
         self.storage = parsed;
-        return Ok(());
+        
+        Ok(())
     }
 }
