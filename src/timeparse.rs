@@ -52,8 +52,10 @@ fn parse_single_time(base: DateTime<Tz>, timestr: &str) -> Result<DateTime<Tz>, 
         source: Some(String::from(timestr)),
     };
 
+    let lowered = timestr.to_lowercase();
+
     let r = regex::Regex::new(r"(?P<h>\d\d?)(:(?P<m>\d\d))?\s*(?P<me>am|pm)").expect("could not compile");
-    let caps = r.captures(timestr).ok_or(error)?;
+    let caps = r.captures(lowered.as_str()).ok_or(error)?;
 
     let mut hour: u32 = caps.name("h").unwrap().as_str().parse().unwrap();
 
@@ -177,9 +179,15 @@ mod testing {
             Utc.with_ymd_and_hms(2023, 2, 11, 5, 0, 0),
             Utc.with_ymd_and_hms(2023, 2, 11, 6, 0, 0));
 
+
         run_test("today, 12:00am-01:30am",
             Utc.with_ymd_and_hms(2023, 2, 11, 5, 0, 0),
             Utc.with_ymd_and_hms(2023, 2, 11, 6, 30, 0));
+
+        // weird capitalization
+        run_test("today, 11Am-12PM",
+            Utc.with_ymd_and_hms(2023, 2, 11, 16, 0, 0),
+            Utc.with_ymd_and_hms(2023, 2, 11, 17, 0, 0));
 
     }
 }
