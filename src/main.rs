@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    io::{self, Write},
+    io::{self, Write}
 };
 
 
@@ -33,6 +33,9 @@ enum Commands {
         time_zone: Option<String>,
     },
     ResetApiKey {
+
+    },
+    ResetStorage {
 
     },
 }
@@ -86,11 +89,18 @@ async fn main() {
                 println!("Override created! Good luck! ")
             }
         },
-        Commands::ResetApiKey {} => {
-            println!("Will clear pagerduty API key from system keychain. This is not reversable. Confirm to continue.");
+        Commands::ResetApiKey {} => { 
+            println!("About to clear pagerduty API key. This is not reversible, confirm to continue");
+
             if confirm() {
-                todo!("not implemented");
+                if let Err(err) = Client::clear_api_key() {
+                    println!("could not clear api key: {:?}", err);
+                    std::process::exit(1);
+                }
             }
+        },
+        Commands::ResetStorage {} => { 
+            todo!("");
         },
     }
 }

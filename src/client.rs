@@ -109,6 +109,11 @@ impl Client {
         }
     }
 
+    pub fn clear_api_key() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let keyring_entry = keyring::Entry::new("pd-fast-override", "api-key");
+        return keyring_entry.delete_password().map_err(|x| Box::from(x));
+    }
+
     pub async fn get_users(&self, pb: ProgressBar) -> reqwest::Result<Vec<User>> {
         let client = reqwest::Client::new();
 
