@@ -36,7 +36,7 @@ pub fn parse(
 ) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
     let lowered_string = range_str.to_lowercase();
 
-    return  parse_single_day_range(now.clone(), &lowered_string);
+    parse_single_day_range(*now, &lowered_string)
 }
 
 
@@ -44,7 +44,7 @@ fn parse_single_day_range(
     now: DateTime<Tz>,
     source: &str,
 )  -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
-    let date_parse = parse_date(now.clone(), &source)?;
+    let date_parse = parse_date(now, source)?;
     let comma_parse = parse_literal(date_parse.rest , ",")?;
     let start_time_parse = parse_time(date_parse.result, comma_parse.rest)?;
     let hyphen_parse = parse_literal(start_time_parse.rest, "-")?;
@@ -68,7 +68,7 @@ fn parse_date(now: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, Pa
         return Ok(parse);
     }
 
-    return Err(ParseError::UnrecognizedDate(String::from(source)));
+    Err(ParseError::UnrecognizedDate(String::from(source)))
 }
 
 fn parse_month_day_date(now: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, ParseError> {
@@ -121,7 +121,7 @@ fn parse_time(base: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, P
         .with_minute(minute.unwrap_or(0))
         .unwrap();
 
-    return Ok(Parse { rest: rest, result: time });
+    Ok(Parse { rest, result: time })
 }
 
 fn parse_meridiem(source: &str) -> Result<Parse<Meridiem>, ParseError> {
@@ -144,7 +144,7 @@ fn parse_number<'a>(source: &'a str) -> Result<Parse<'a, u32>, ParseError> {
 
     let n = source[0..schars].parse::<u32>();
 
-    return Ok(Parse { rest: &source[schars..source.len()], result: n.unwrap() });
+    Ok(Parse { rest: &source[schars..source.len()], result: n.unwrap() })
 }
 
 fn parse_literal<'a>(source: &'a str, literal: &str) -> Result<Parse<'a, ()>, ParseError> {
@@ -193,7 +193,7 @@ mod testing {
         let run_test =
             |s: &str, from: LocalResult<DateTime<Utc>>, to: LocalResult<DateTime<Utc>>| {
                 let (parsed_from, parsed_to) =
-                    parse(&now, s).expect(format!("expected to parse {:?}", s).as_str());
+                    parse(&now, s).unwrap_or_else(|_| panic!("expected to parse {:?}", s));
                 assert_eq!(parsed_from.timestamp(), from.unwrap().timestamp());
                 assert_eq!(parsed_to.timestamp(), to.unwrap().timestamp());
             };
