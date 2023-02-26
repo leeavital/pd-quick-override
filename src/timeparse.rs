@@ -10,6 +10,7 @@ use chrono_tz::Tz;
 
 
 
+
 /// Parse represents a value that has been parsed out a &str
 /// the `result` field is the thing that has been parsed, and the `rest` field 
 /// is the string remaining for the parse to parse.
@@ -30,6 +31,14 @@ struct Parse<'a, T> {
 enum Meridiem {
     Am, Pm 
 }
+
+pub const VALID_TIMES : [&str; 5] =  [
+    "today, 10am-10pm",
+    "tomorrow, 10am-1pm",
+    "today, 1pm - tomorrow, 8am",
+    "10/1, 10:00am - 2:30pm",
+    "10/1, 10AM - 10/2, 3PM",
+];
 
 /// ranges come in the following forms:
 /// ```
@@ -67,6 +76,8 @@ fn parse_single_day_range(
     let start_time_parse = parse_time(date_parse.result, comma_parse.rest)?;
     let hyphen_parse = parse_literal(start_time_parse.rest, "-")?;
     let end_time_parse = parse_time(date_parse.result, hyphen_parse.rest)?;
+    parse_eol(end_time_parse.rest)?;
+
     Ok((start_time_parse.result, end_time_parse.result))
 }
 
@@ -75,10 +86,13 @@ fn parse_single_multi_day_range(
     source: &str,
 )  -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
     let start_date_parse = parse_date(now, source)?;
-    let start_time_parse = parse_time(start_date_parse.result, start_date_parse.rest)?;
+    let comma_parse = parse_literal(start_date_parse.rest, ",")?;
+    let start_time_parse = parse_time(start_date_parse.result, comma_parse.rest)?;
     let hyphen_parse = parse_literal(start_time_parse.rest, "-")?;
     let end_date_parse = parse_date(now, hyphen_parse.rest)?;
-    let end_time_parse = parse_time(end_date_parse.result, end_date_parse.rest)?;
+    let comma_parse_2 = parse_literal(end_date_parse.rest, ",")?;
+    let end_time_parse = parse_time(end_date_parse.result, comma_parse_2.rest)?;
+    parse_eol(end_time_parse.rest)?;
     Ok((start_time_parse.result, end_time_parse.result))
 }
 
@@ -191,6 +205,18 @@ fn parse_literal<'a>(source: &'a str, literal: &str) -> Result<Parse<'a, ()>, Pa
     })
 }
 
+fn parse_eol(source: &str) -> Result<Parse<()>, ParseError> {
+
+    if source.len() == 0 {
+        Ok(Parse{
+            rest: source,
+            result: (),
+        })
+    } else {
+        Err(ParseError::ExpectedEol(source.to_string()))
+    }
+}
+
 
 #[derive(Debug, Error)]
 pub enum ParseError {
@@ -205,6 +231,9 @@ pub enum ParseError {
 
     #[error("expected number, got {0}")]
     ExpectedNumber(String),
+
+    #[error("expected EOD, but had remaining input {0}")]
+    ExpectedEol(String),
 }
 
 #[cfg(test)]
@@ -259,7 +288,7 @@ mod testing {
 
 
         // multi day span
-        run_test("today 10am - tomorrow 2pm",
+        run_test("today, 10am - tomorrow, 2pm",
             Utc.with_ymd_and_hms(2023, 2, 11, 15, 0, 0),
             Utc.with_ymd_and_hms(2023, 2, 12, 19, 0, 0))
 
@@ -273,7 +302,7 @@ mod testing {
                 
         // UCT-5
         let now = tz.with_ymd_and_hms(2023, 3, 11, 12, 0, 0).unwrap();
-        let (start, end) = parse(&now, "today 10pm - tomorrow 10am").expect("expected to parse");
+        let (start, end) = parse(&now, "today, 10pm - tomorrow, 10am").expect("expected to parse");
 
         let d = end - start;
         assert_eq!(d, Duration::hours(11));
@@ -294,5 +323,15 @@ mod testing {
         parse_date(&now, "today").expect("expected to parse date");
         parse_date(&now, "10/30").expect("expected date to parse");
         parse_time(now, "10:30 am").expect("expected date to parse");
+    }
+
+    #[test]
+    fn test_examples_are_valid() {
+        let tz: Tz = "America/New_York".parse().unwrap();
+        let now = tz.with_ymd_and_hms(2023, 2, 11, 12, 0, 0).unwrap();
+
+        for example in VALID_TIMES {
+            parse(&now, example).expect("could not parse");
+        }
     }
 }

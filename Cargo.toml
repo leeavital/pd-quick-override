@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 license = "MIT"
 description = "A tool to quickly create pagerduty overrides"
+repository = "github.com/leeavital/pd-quick-override"
 readme = "README.md"
 keywords = ["cli", "pagerduty"]
 

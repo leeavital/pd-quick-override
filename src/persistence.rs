@@ -1,5 +1,5 @@
 
-use std::{path::{PathBuf}, error::Error, ops::Mul};
+use std::{path::{PathBuf}, error::Error};
 
 use chrono::{Utc};
 
@@ -37,11 +37,9 @@ impl <'a> Database<'a> {
             storage: Serialized { users: Vec::new(), schedules: Vec::new(), updated_at: 0 },
         };
         if !storage_file.exists() {
-            println!("doing remote load...");
             db.do_remote_load().await?;
             return Ok(db);
         } else {
-            println!("loading state from file");
             db.do_file_load().await?;
         }
 
@@ -49,6 +47,8 @@ impl <'a> Database<'a> {
     }
 
     async fn do_remote_load(&mut self) -> Result<(), Box<dyn Error>> {
+
+        println!("loading all users and schedules from Pagerduty. This will take a while, but should only happen once");
 
         let progress = MultiProgress::new();
         let users_progress = progress.add(ProgressBar::new(100))
@@ -103,12 +103,15 @@ impl <'a> Database<'a> {
     }
 
     pub async fn do_file_load(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut f = tokio::fs::File::open(Self::get_storage_file()).await?;
+        let storage_file = Self::get_storage_file();
+        let mut f = tokio::fs::File::open(&storage_file).await?;
 
         let mut out = String::new();
         f.read_to_string(&mut out).await?;
 
         let parsed : Serialized = serde_json::from_str(out.as_str())?;
+
+        println!("loaded cached schedules and users from {}, last updated at {}", storage_file.display(), parsed.updated_at);
 
         self.storage = parsed;
         

@@ -56,7 +56,13 @@ async fn main() {
             tz.timestamp_opt(now, 0).unwrap();
             let (from, to) = timeparse::parse(&tz.timestamp_opt(now, 0).unwrap(), at.as_str())
                 .unwrap_or_else(|e| {
-                    println!("cannot parse: {:?}", e);
+                    println!("could not parse the time given time range: {:?}", e);
+                    println!("here are some example time ranges: ");
+
+                    for example in timeparse::VALID_TIMES {
+                        println!("\t{example}");
+                    }
+                    
                     std::process::exit(1);
                 });
 
