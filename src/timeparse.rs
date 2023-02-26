@@ -9,6 +9,18 @@ use chrono::{DateTime};
 use chrono_tz::Tz;
 
 
+
+/// Parse represents a value that has been parsed out a &str
+/// the `result` field is the thing that has been parsed, and the `rest` field 
+/// is the string remaining for the parse to parse.
+/// 
+/// This module is made up of functions that look like:
+/// ```
+///     parse_foo(&str) -> Result<Parse>
+/// ```
+/// 
+/// Generally speaking, the `rest` field of a successful parse_* function should be sent to the next parse function.
+/// You can write parser comibinators by chaining calls to parse_* and returning the final Parse.
 struct Parse<'a, T> {
     rest: &'a str,
     result: T,
@@ -19,17 +31,19 @@ enum Meridiem {
     Am, Pm 
 }
 
-// ranges come in the following forms:
-// <full-range> := <date> , <time> - <time>
-//                 | <date> <time> - <date> <time>
-//                 | <date> - <date> , <time-range>
+/// ranges come in the following forms:
+/// ```
+/// <full-range> := <date> , <time> - <time>
+///                 | <date> <time> - <date> <time>
+///                 | <date> - <date> , <time> - <time> /* TODO */
 
-//  <date> := today
-//             | tomorrow
-//             |  <D:month>/<D:day>
+///  <date> := today
+///             | tomorrow
+///             |  <D:month>/<D:day>
 
-//  <time> :=  <D:hour> (am | pm)
-//             <D:hour>:<D:minute> (am | pm)
+///  <time> :=  <D:hour> (am | pm)
+///             <D:hour>:<D:minute> (am | pm)
+/// ```
 pub fn parse(
     now: &DateTime<Tz>,
     range_str: &str,
@@ -199,7 +213,7 @@ mod testing {
     use chrono::{LocalResult, Utc};
 
     #[test]
-    fn test_me() {
+    fn test_parsing() {
         let tz: Tz = "America/New_York".parse().unwrap();
         
         // UCT-5
@@ -249,6 +263,20 @@ mod testing {
             Utc.with_ymd_and_hms(2023, 2, 11, 15, 0, 0),
             Utc.with_ymd_and_hms(2023, 2, 12, 19, 0, 0))
 
+
+    }
+
+
+    #[test]
+    fn test_dst() {
+        let tz: Tz = "America/New_York".parse().unwrap();
+                
+        // UCT-5
+        let now = tz.with_ymd_and_hms(2023, 3, 11, 12, 0, 0).unwrap();
+        let (start, end) = parse(&now, "today 10pm - tomorrow 10am").expect("expected to parse");
+
+        let d = end - start;
+        assert_eq!(d, Duration::hours(11));
     }
 
 
