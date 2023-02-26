@@ -10,7 +10,7 @@ pub fn select<'a, T>(ss: &'a HashMap<String, &T>) -> io::Result<&'a T>
 where
     T: Clone,
 {
-    let mut subprocess = Command::new("fzf2")
+    let mut subprocess = Command::new("fzf")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
