@@ -25,7 +25,7 @@ enum Commands {
     Create {
         #[arg(short, long)]
         at: String,
-        
+
         #[arg(short, long)]
         me: bool,
 
@@ -53,7 +53,7 @@ async fn main() {
             tz.timestamp_opt(now, 0).unwrap();
             let (from, to) = timeparse::parse(&tz.timestamp_opt(now, 0).unwrap(), at.as_str())
                 .unwrap_or_else(|e| {
-                    println!("cannot parse: {}", e);
+                    println!("cannot parse: {:?}", e);
                     std::process::exit(1);
                 });
 
@@ -80,14 +80,17 @@ async fn main() {
             let selected_schedule =
                 fuzzyselect::select(&schedules_by_name).expect("could not read it");
 
-            println!("will create override on user {selected_user} for schedule {selected_schedule} from {from} to {to}, confirm to continue");
+            println!("will create override on user {selected_user} for schedule {selected_schedule} from {from} to {to}, confirm to continue.");
             if confirm() {
                 client.create_schedule_override(selected_user, selected_schedule, from, to).await.expect("could not create override");
                 println!("Override created! Good luck! ")
             }
         },
-        Commands::ResetApiKey {} => { 
-            todo!();
+        Commands::ResetApiKey {} => {
+            println!("Will clear pagerduty API key from system keychain. This is not reversable. Confirm to continue.");
+            if confirm() {
+                todo!("not implemented");
+            }
         },
     }
 }
