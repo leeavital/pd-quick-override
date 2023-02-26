@@ -10,6 +10,13 @@ This is a tool to quickly create pagerduty overrides from the command line.
 ![pd-quick-override-demo](https://user-images.githubusercontent.com/1482532/221438741-23a24f26-f3d2-4d2a-8c02-b6306b9c3b16.gif)
 
 
+Install with
+
+```
+cargo install pd-quick-override
+```
+
+
 ## usage: create
 
 Create overrides for the current day:
