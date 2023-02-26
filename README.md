@@ -35,6 +35,8 @@ pd-quick-override create --time-zone 'Europe/Paris --at 'today, 4:00pm-5:00pm'
 
 ## usage: reset-api-key
 
-Todo
+Clear the API key stored in your local keychain.
 
-
+```
+pd-quick-override reset-api-key
+```
