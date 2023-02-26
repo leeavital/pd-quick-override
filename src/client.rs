@@ -1,5 +1,6 @@
 use chrono::{DateTime, TimeZone};
-use reqwest::{RequestBuilder, Body};
+use indicatif::ProgressBar;
+use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 use std::{io, vec, fmt::{Display, Write}};
 
@@ -10,6 +11,7 @@ pub struct UserResponse {
     more: bool,
     limit: i32,
     offset: i32,
+    total: u64,
 }
 
 #[derive(Deserialize, Debug)]
@@ -40,6 +42,7 @@ pub struct SchedulesResponse {
     pub more: bool,
     pub limit: i32,
     pub offset: i32,
+    pub total: u64,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -111,7 +114,7 @@ impl Client {
         return keyring_entry.delete_password().map_err(|x| Box::from(x));
     }
 
-    pub async fn get_users(&self) -> reqwest::Result<Vec<User>> {
+    pub async fn get_users(&self, pb: ProgressBar) -> reqwest::Result<Vec<User>> {
         let client = reqwest::Client::new();
 
         let mut offset = 0;
@@ -122,22 +125,28 @@ impl Client {
         loop {
             let req = client
                 .get("https://api.pagerduty.com/users")
-                .query(&[("offset", offset), ("limit", page_size)]);
+                .query(&[("offset", offset), ("limit", page_size)])
+                .query(&[("total", true)]);
 
             let resp = self.add_common_headers(req).send().await?;
             let users = resp.json::<UserResponse>().await?;
+
+            pb.set_length(users.total);
+            pb.inc(users.users.len() as u64);
+
             for u in users.users {
                 all_users.push(u);
             }
 
             offset += users.limit;
             if !users.more {
+                pb.finish();
                 return Ok(all_users);
             }
         }
     }
 
-    pub async fn get_schedules(&self) -> reqwest::Result<Vec<Schedule>> {
+    pub async fn get_schedules(&self, pb: ProgressBar) -> reqwest::Result<Vec<Schedule>> {
         let client = reqwest::Client::new();
 
         let mut all_schedules = Vec::new();
@@ -145,13 +154,20 @@ impl Client {
         let page_size = 100;
         loop {
             let req = client.get("https://api.pagerduty.com/schedules")
-                .query(&[("offset", offset), ("limit", page_size)]);
+                .query(&[("offset", offset), ("limit", page_size)])
+                .query(&[("total", true)]);
+
             let resp = self.add_common_headers(req).send().await?;
             let schedules = resp.json::<SchedulesResponse>().await?;
+
+            pb.set_length(schedules.total);
+            pb.inc(schedules.schedules.len() as u64);
+
             offset += schedules.limit;
             all_schedules.extend(schedules.schedules);
 
             if !schedules.more {
+                pb.finish(); 
                 return Ok(all_schedules);
             } 
         }

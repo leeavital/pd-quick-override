@@ -1,8 +1,9 @@
 
-use std::{path::{PathBuf}, error::Error};
+use std::{path::{PathBuf}, error::Error, ops::Mul};
 
 use chrono::{Utc};
 
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
 use tokio::{join, io::{AsyncWriteExt, AsyncReadExt}};
 
@@ -48,8 +49,19 @@ impl <'a> Database<'a> {
     }
 
     async fn do_remote_load(&mut self) -> Result<(), Box<dyn Error>> {
-        let users = self.client.get_users();
-        let schedules = self.client.get_schedules();
+
+        let progress = MultiProgress::new();
+        let users_progress = progress.add(ProgressBar::new(100))
+            .with_prefix("loading users")
+            .with_style(ProgressStyle::with_template("Loading Users:     [{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}").unwrap());
+
+        let schedule_progress = progress.add(ProgressBar::new(100))
+            .with_prefix("loading schedules")
+            .with_style(ProgressStyle::with_template("Loading Schedules: [{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}").unwrap());
+
+
+        let users = self.client.get_users(users_progress);
+        let schedules = self.client.get_schedules(schedule_progress);
 
         let (r_users, r_schedules) = join!(users, schedules);
 
