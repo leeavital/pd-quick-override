@@ -1,5 +1,5 @@
 use chrono::{DateTime, TimeZone};
-use reqwest::RequestBuilder;
+use reqwest::{RequestBuilder, Body};
 use serde::{Deserialize, Serialize};
 use std::{io, vec, fmt::{Display, Write}};
 
@@ -104,6 +104,11 @@ impl Client {
             }
             Err(e) => Err(Box::from(e)),
         }
+    }
+
+    pub fn clear_api_key() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let keyring_entry = keyring::Entry::new("pd-fast-override", "api-key");
+        return keyring_entry.delete_password().map_err(|x| Box::from(x));
     }
 
     pub async fn get_users(&self) -> reqwest::Result<Vec<User>> {
