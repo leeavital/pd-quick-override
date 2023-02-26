@@ -16,6 +16,7 @@ Install with
 cargo install pd-quick-override
 ```
 
+You'll also need [FZF](https://github.com/junegunn/fzf) installed on your system.
 
 ## usage: create
 

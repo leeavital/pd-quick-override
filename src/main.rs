@@ -51,11 +51,11 @@ async fn main() {
             tz.timestamp_opt(now, 0).unwrap();
             let (from, to) = timeparse::parse(&tz.timestamp_opt(now, 0).unwrap(), at.as_str())
                 .unwrap_or_else(|e| {
-                    println!("could not parse the time given time range: {:?}", e);
-                    println!("here are some example time ranges: ");
+                    eprintln!("could not parse the time given time range: {:?}", e);
+                    eprintln!("here are some example time ranges: ");
 
                     for example in timeparse::VALID_TIMES {
-                        println!("\t{example}");
+                        eprintln!("\t{example}");
                     }
 
                     std::process::exit(1);
@@ -102,7 +102,7 @@ async fn main() {
 
             if confirm() {
                 if let Err(err) = Client::clear_api_key() {
-                    println!("could not clear api key: {:?}", err);
+                    eprintln!("could not clear api key: {:?}", err);
                     std::process::exit(1);
                 }
             }
