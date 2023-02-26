@@ -1,4 +1,5 @@
 use chrono::{DateTime, TimeZone};
+use indicatif::ProgressBar;
 use reqwest::RequestBuilder;
 use serde::{Deserialize, Serialize};
 use std::{io, vec, fmt::{Display, Write}};
@@ -106,7 +107,7 @@ impl Client {
         }
     }
 
-    pub async fn get_users(&self) -> reqwest::Result<Vec<User>> {
+    pub async fn get_users(&self, pb: ProgressBar) -> reqwest::Result<Vec<User>> {
         let client = reqwest::Client::new();
 
         let mut offset = 0;
@@ -125,14 +126,18 @@ impl Client {
                 all_users.push(u);
             }
 
+            let pct_done = all_users.len() as u64 / users.limit as u64;
+            pb.inc(pct_done - pb.position());
+
             offset += users.limit;
             if !users.more {
+                pb.finish();
                 return Ok(all_users);
             }
         }
     }
 
-    pub async fn get_schedules(&self) -> reqwest::Result<Vec<Schedule>> {
+    pub async fn get_schedules(&self, pb: ProgressBar) -> reqwest::Result<Vec<Schedule>> {
         let client = reqwest::Client::new();
 
         let mut all_schedules = Vec::new();
@@ -146,7 +151,11 @@ impl Client {
             offset += schedules.limit;
             all_schedules.extend(schedules.schedules);
 
+            let pct_done = all_schedules.len() as u64 / schedules.limit as u64;
+            pb.inc(pct_done - pb.position());
+
             if !schedules.more {
+                pb.finish(); 
                 return Ok(all_schedules);
             } 
         }
