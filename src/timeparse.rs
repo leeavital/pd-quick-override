@@ -35,7 +35,6 @@ pub fn parse(
     now: &DateTime<Tz>,
     range_str: &str,
 ) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
-
     let lowered_string = range_str.to_lowercase();
 
     // TODO: no date clone?
@@ -50,7 +49,6 @@ pub fn parse(
 }
 
 fn parse_date(now: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, ParseError> {
-
     if let Ok(parse) = parse_literal(source, "today") {
         let today = now.duration_trunc(Duration::days(1)).unwrap();
         return Ok(Parse { rest: parse.rest, result: today });
@@ -129,6 +127,21 @@ fn parse_time(base: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, P
     return Ok(Parse { rest: rest, result: time });
 }
 
+fn parse_meridiem(source: &str) -> Result<Parse<Meridiem>, ParseError> {
+
+    if let Ok(parse) = parse_literal(source, "am") {
+        return Ok(Parse { rest: parse.rest, result: Meridiem::Am });
+    }
+
+    if let Ok(parse) = parse_literal(source, "pm") {
+        return Ok(Parse { rest: parse.rest, result: Meridiem::Pm });
+    }
+
+    return Err(ParseError { 
+        reason: ParseErrorReason::Other, 
+        source: Some(String::from(source)),
+    });
+}
 
 fn parse_number<'a>(source: &'a str) -> Result<Parse<'a, u32>, ParseError> {
     let schars = source.chars().take_while(|x| x.is_numeric()).count();
@@ -156,107 +169,6 @@ fn parse_literal<'a>(source: &'a str, literal: &str) -> Result<Parse<'a, ()>, Pa
     })
 }
 
-
-fn parse_meridiem(source: &str) -> Result<Parse<Meridiem>, ParseError> {
-
-    if let Ok(parse) = parse_literal(source, "am") {
-        return Ok(Parse { rest: parse.rest, result: Meridiem::Am });
-    }
-
-    if let Ok(parse) = parse_literal(source, "pm") {
-        return Ok(Parse { rest: parse.rest, result: Meridiem::Pm });
-    }
-
-    return Err(ParseError { 
-        reason: ParseErrorReason::Other, 
-        source: Some(String::from(source)),
-    });
-}
-
-
-// parse a string, of the form 10am-10pm into one date range
-fn get_single_range_with_base(
-    base: DateTime<Tz>,
-    range_parts: &str,
-) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
-    if range_parts.contains('-') {
-        let parts: Vec<&str> = range_parts.split('-').collect();
-        let start = parse_single_time(base, parts[0])?;
-        let end = parse_single_time(base, parts[1])?;
-
-        return Ok((start, end));
-    }
-
-    Err(ParseError {
-        reason: ParseErrorReason::UnrecognizedTimeRange,
-        source: Some(String::from(range_parts)),
-    })
-}
-
-fn parse_single_time(base: DateTime<Tz>, timestr: &str) -> Result<DateTime<Tz>, ParseError> {
-    let error = ParseError {
-        reason: ParseErrorReason::IllegalTime,
-        source: Some(String::from(timestr)),
-    };
-
-    let lowered = timestr.to_lowercase();
-
-    let r = regex::Regex::new(r"(?P<h>\d\d?)(:(?P<m>\d\d))?\s*(?P<me>am|pm)").expect("could not compile");
-    let caps = r.captures(lowered.as_str()).ok_or(error)?;
-
-    let mut hour: u32 = caps.name("h").unwrap().as_str().parse().unwrap();
-
-    match caps.name("me").map(|meridiem| meridiem.as_str()) {
-        Some("am") => {
-            if hour == 12 {
-                hour = 0
-            }
-        },
-        Some("pm") => {
-            if hour != 12 {
-                hour += 12
-            }
-        },
-        None => unreachable!("prevented by regex (none)"),
-        Some(e) => unreachable!("prevented by regex {e}"),
-    }
-
-
-    let mut minute = 0;
-    if let Some(minute_s) = caps.name("m") {
-        minute = minute_s.as_str().trim_start_matches(':').parse().unwrap();
-    }
-
-
-    Ok(base.with_hour(hour).unwrap().with_minute(minute).unwrap())
-}
-
-fn get_base_date(now: &DateTime<Tz>, range_str: &str) -> Result<DateTime<Tz>, ParseError> {
-    if range_str.starts_with("tomorrow") {
-        let base_date = now
-            .add(chrono::Duration::days(1))
-            .with_hour(0)
-            .unwrap()
-            .with_minute(0)
-            .unwrap()
-            .with_second(0)
-            .unwrap();
-
-        return Ok(base_date);
-    }
-
-    if range_str.starts_with("today") {
-        let base_date = now.duration_trunc(Duration::days(1)).unwrap();
-        return Ok(base_date);
-    }
-
-    // TODO: exact dates
-
-    Err(ParseError {
-        reason: ParseErrorReason::UnrecognizedDate,
-        source: Some(String::from(range_str)),
-    })
-}
 
 #[derive(Debug)]
 pub enum ParseErrorReason {
