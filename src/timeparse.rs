@@ -50,16 +50,16 @@ pub fn parse(
 ) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
     let lowered_string = range_str.to_lowercase();
 
-    if let Ok((start, end)) = parse_single_multi_day_range(now.clone(), &lowered_string) {
+    if let Ok((start, end)) = parse_single_multi_day_range(now, &lowered_string) {
         return Ok((start, end));
     }
 
-    parse_single_day_range(*now, &lowered_string)
+    parse_single_day_range(now, &lowered_string)
 }
 
 
 fn parse_single_day_range(
-    now: DateTime<Tz>,
+    now: &DateTime<Tz>,
     source: &str,
 )  -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
     let date_parse = parse_date(now, source)?;
@@ -71,7 +71,7 @@ fn parse_single_day_range(
 }
 
 fn parse_single_multi_day_range(
-    now: DateTime<Tz>,
+    now: &DateTime<Tz>,
     source: &str,
 )  -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
     let start_date_parse = parse_date(now, source)?;
@@ -82,7 +82,7 @@ fn parse_single_multi_day_range(
     Ok((start_time_parse.result, end_time_parse.result))
 }
 
-fn parse_date(now: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, ParseError> {
+fn parse_date<'a>(now: &DateTime<Tz>, source: &'a str) -> Result<Parse<'a, DateTime<Tz>>, ParseError> {
     if let Ok(parse) = parse_literal(source, "today") {
         let today = now.duration_trunc(Duration::days(1)).unwrap();
         return Ok(Parse { rest: parse.rest, result: today });
@@ -101,7 +101,7 @@ fn parse_date(now: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, Pa
     Err(ParseError::UnrecognizedDate(String::from(source)))
 }
 
-fn parse_month_day_date(now: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, ParseError> {
+fn parse_month_day_date<'a>(now: &DateTime<Tz>, source: &'a str) -> Result<Parse<'a, DateTime<Tz>>, ParseError> {
     let month_parse = parse_number(source)?;
     let slash_parse = parse_literal(month_parse.rest, "/")?;
     let date_parse = parse_number(slash_parse.rest)?;
@@ -291,8 +291,8 @@ mod testing {
 
         let tz: Tz = "America/New_York".parse().unwrap();
         let now = tz.with_ymd_and_hms(2023, 2, 11, 12, 0, 0).unwrap();
-        parse_date(now, "today").expect("expected to parse date");
-        parse_date(now, "10/30").expect("expected date to parse");
+        parse_date(&now, "today").expect("expected to parse date");
+        parse_date(&now, "10/30").expect("expected date to parse");
         parse_time(now, "10:30 am").expect("expected date to parse");
     }
 }
