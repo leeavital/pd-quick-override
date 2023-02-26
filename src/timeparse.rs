@@ -36,6 +36,10 @@ pub fn parse(
 ) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
     let lowered_string = range_str.to_lowercase();
 
+    if let Ok((start, end)) = parse_single_multi_day_range(now.clone(), &lowered_string) {
+        return Ok((start, end));
+    }
+
     parse_single_day_range(*now, &lowered_string)
 }
 
@@ -49,6 +53,18 @@ fn parse_single_day_range(
     let start_time_parse = parse_time(date_parse.result, comma_parse.rest)?;
     let hyphen_parse = parse_literal(start_time_parse.rest, "-")?;
     let end_time_parse = parse_time(date_parse.result, hyphen_parse.rest)?;
+    Ok((start_time_parse.result, end_time_parse.result))
+}
+
+fn parse_single_multi_day_range(
+    now: DateTime<Tz>,
+    source: &str,
+)  -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
+    let start_date_parse = parse_date(now, source)?;
+    let start_time_parse = parse_time(start_date_parse.result, start_date_parse.rest)?;
+    let hyphen_parse = parse_literal(start_time_parse.rest, "-")?;
+    let end_date_parse = parse_date(now, hyphen_parse.rest)?;
+    let end_time_parse = parse_time(end_date_parse.result, end_date_parse.rest)?;
     Ok((start_time_parse.result, end_time_parse.result))
 }
 
@@ -226,6 +242,12 @@ mod testing {
         run_test("today, 11Am-12PM",
             Utc.with_ymd_and_hms(2023, 2, 11, 16, 0, 0),
             Utc.with_ymd_and_hms(2023, 2, 11, 17, 0, 0));
+
+
+        // multi day span
+        run_test("today 10am - tomorrow 2pm",
+            Utc.with_ymd_and_hms(2023, 2, 11, 15, 0, 0),
+            Utc.with_ymd_and_hms(2023, 2, 12, 19, 0, 0))
 
     }
 
