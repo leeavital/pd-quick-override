@@ -1,0 +1,35 @@
+{
+  "users": [
+    {
+      "id": "P12345",
+      "email": "human.mcperson@microsoft.com"
+    },
+    {
+      "id": "P12345",
+      "email": "real.human@yahoo.com"
+    },
+    {
+      "id": "P12345",
+      "email": "jim.normallastname@gmail.com"
+    },
+    {
+      "id": "P12345",
+      "email": "coolguy.mcgee@gmail.com"
+    }
+  ],
+  "schedules": [
+    {
+      "id": "P3456",
+      "name": "[primary] important schedule"
+    },
+    {
+      "id": "P3456",
+      "name": "[secondary] important schedule"
+    },
+    {
+      "id": "P3456",
+      "name": "[primary] unimportant schedule"
+    }
+  ],
+  "updated_at": 1677445731
+}
