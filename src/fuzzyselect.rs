@@ -1,7 +1,8 @@
 use std::{
     collections::HashMap,
     io::{self, Read, Write},
-    process::{Command, Stdio}, ops::Deref,
+    ops::Deref,
+    process::{Command, Stdio},
 };
 
 // TODO: can this work on &T to avoid the need to clone?
@@ -15,7 +16,7 @@ where
         .spawn()?;
 
     let stdin = subprocess.stdin.as_mut().unwrap();
-    for k  in ss.keys() {
+    for k in ss.keys() {
         stdin.write_all(k.as_bytes())?;
         stdin.write_all("\n".as_bytes())?;
     }
@@ -29,6 +30,6 @@ where
 
     selected_key.truncate(selected_key.trim().len());
 
-    let value= ss.get(&selected_key).unwrap().deref();
+    let value = ss.get(&selected_key).unwrap().deref();
     Ok(value)
 }

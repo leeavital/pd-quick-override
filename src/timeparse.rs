@@ -1,25 +1,22 @@
-use std::{ops::Add};
+use std::ops::Add;
 use thiserror::Error;
 
 #[allow(unused)]
 use chrono::TimeZone;
-use chrono::{Duration, DurationRound, Timelike, Datelike};
+use chrono::{Datelike, Duration, DurationRound, Timelike};
 
-use chrono::{DateTime};
+use chrono::DateTime;
 use chrono_tz::Tz;
 
-
-
-
 /// Parse represents a value that has been parsed out a &str
-/// the `result` field is the thing that has been parsed, and the `rest` field 
+/// the `result` field is the thing that has been parsed, and the `rest` field
 /// is the string remaining for the parse to parse.
-/// 
+///
 /// This module is made up of functions that look like:
 /// ```
 ///     parse_foo(&str) -> Result<Parse>
 /// ```
-/// 
+///
 /// Generally speaking, the `rest` field of a successful parse_* function should be sent to the next parse function.
 /// You can write parser comibinators by chaining calls to parse_* and returning the final Parse.
 struct Parse<'a, T> {
@@ -29,10 +26,11 @@ struct Parse<'a, T> {
 
 #[derive(PartialEq, Eq)]
 enum Meridiem {
-    Am, Pm 
+    Am,
+    Pm,
 }
 
-pub const VALID_TIMES : [&str; 5] =  [
+pub const VALID_TIMES: [&str; 5] = [
     "today, 10am-10pm",
     "tomorrow, 10am-1pm",
     "today, 1pm - tomorrow, 8am",
@@ -66,13 +64,12 @@ pub fn parse(
     parse_single_day_range(now, &lowered_string)
 }
 
-
 fn parse_single_day_range(
     now: &DateTime<Tz>,
     source: &str,
-)  -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
+) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
     let date_parse = parse_date(now, source)?;
-    let comma_parse = parse_literal(date_parse.rest , ",")?;
+    let comma_parse = parse_literal(date_parse.rest, ",")?;
     let start_time_parse = parse_time(date_parse.result, comma_parse.rest)?;
     let hyphen_parse = parse_literal(start_time_parse.rest, "-")?;
     let end_time_parse = parse_time(date_parse.result, hyphen_parse.rest)?;
@@ -84,7 +81,7 @@ fn parse_single_day_range(
 fn parse_single_multi_day_range(
     now: &DateTime<Tz>,
     source: &str,
-)  -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
+) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
     let start_date_parse = parse_date(now, source)?;
     let comma_parse = parse_literal(start_date_parse.rest, ",")?;
     let start_time_parse = parse_time(start_date_parse.result, comma_parse.rest)?;
@@ -96,17 +93,26 @@ fn parse_single_multi_day_range(
     Ok((start_time_parse.result, end_time_parse.result))
 }
 
-fn parse_date<'a>(now: &DateTime<Tz>, source: &'a str) -> Result<Parse<'a, DateTime<Tz>>, ParseError> {
+fn parse_date<'a>(
+    now: &DateTime<Tz>,
+    source: &'a str,
+) -> Result<Parse<'a, DateTime<Tz>>, ParseError> {
     if let Ok(parse) = parse_literal(source, "today") {
         let today = now.duration_trunc(Duration::days(1)).unwrap();
-        return Ok(Parse { rest: parse.rest, result: today });
+        return Ok(Parse {
+            rest: parse.rest,
+            result: today,
+        });
     }
 
     if let Ok(parse) = parse_literal(source, "tomorrow") {
         let today = now.duration_trunc(Duration::days(1)).unwrap();
-        let tomorrow= today.add(Duration::days(1));
-        return Ok(Parse { rest: parse.rest, result: tomorrow });
-    } 
+        let tomorrow = today.add(Duration::days(1));
+        return Ok(Parse {
+            rest: parse.rest,
+            result: tomorrow,
+        });
+    }
 
     if let Ok(parse) = parse_month_day_date(now, source) {
         return Ok(parse);
@@ -115,19 +121,28 @@ fn parse_date<'a>(now: &DateTime<Tz>, source: &'a str) -> Result<Parse<'a, DateT
     Err(ParseError::UnrecognizedDate(String::from(source)))
 }
 
-fn parse_month_day_date<'a>(now: &DateTime<Tz>, source: &'a str) -> Result<Parse<'a, DateTime<Tz>>, ParseError> {
+fn parse_month_day_date<'a>(
+    now: &DateTime<Tz>,
+    source: &'a str,
+) -> Result<Parse<'a, DateTime<Tz>>, ParseError> {
     let month_parse = parse_number(source)?;
     let slash_parse = parse_literal(month_parse.rest, "/")?;
     let date_parse = parse_number(slash_parse.rest)?;
 
     // TODO: year
 
-    let date = now.duration_trunc(Duration::days(1)).unwrap()
-        .with_month(month_parse.result).unwrap()
+    let date = now
+        .duration_trunc(Duration::days(1))
+        .unwrap()
+        .with_month(month_parse.result)
+        .unwrap()
         .with_day(date_parse.result)
         .unwrap();
 
-    Ok(Parse { rest: date_parse.rest, result: date })
+    Ok(Parse {
+        rest: date_parse.rest,
+        result: date,
+    })
 }
 
 fn parse_time(base: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, ParseError> {
@@ -135,19 +150,18 @@ fn parse_time(base: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, P
     let mut rest = hour_parse.rest;
 
     let mut minute = Some(0);
-    if let Ok(colon_parse) = parse_literal(rest, ":"){
+    if let Ok(colon_parse) = parse_literal(rest, ":") {
         rest = colon_parse.rest;
         let minute_parse = parse_number(rest)?;
-        
+
         minute = Some(minute_parse.result);
         rest = minute_parse.rest;
     }
 
-
     let mut meridiem = Meridiem::Am;
     if let Ok(meridiem_parse) = parse_meridiem(rest) {
         meridiem = meridiem_parse.result;
-        rest = meridiem_parse.rest; 
+        rest = meridiem_parse.rest;
     }
 
     let mut hour = hour_parse.result;
@@ -159,7 +173,8 @@ fn parse_time(base: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, P
         hour += 12;
     }
 
-    let time = base.with_hour(hour)
+    let time = base
+        .with_hour(hour)
         .unwrap()
         .with_minute(minute.unwrap_or(0))
         .unwrap();
@@ -169,11 +184,17 @@ fn parse_time(base: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, P
 
 fn parse_meridiem(source: &str) -> Result<Parse<Meridiem>, ParseError> {
     if let Ok(parse) = parse_literal(source, "am") {
-        return Ok(Parse { rest: parse.rest, result: Meridiem::Am });
+        return Ok(Parse {
+            rest: parse.rest,
+            result: Meridiem::Am,
+        });
     }
 
     if let Ok(parse) = parse_literal(source, "pm") {
-        return Ok(Parse { rest: parse.rest, result: Meridiem::Pm });
+        return Ok(Parse {
+            rest: parse.rest,
+            result: Meridiem::Pm,
+        });
     }
 
     Err(ParseError::IllegalMeridiem(String::from(source)))
@@ -187,28 +208,33 @@ fn parse_number(source: &str) -> Result<Parse<u32>, ParseError> {
 
     let n = source[0..schars].parse::<u32>();
 
-    Ok(Parse { rest: &source[schars..source.len()], result: n.unwrap() })
+    Ok(Parse {
+        rest: &source[schars..source.len()],
+        result: n.unwrap(),
+    })
 }
 
 fn parse_literal<'a>(source: &'a str, literal: &str) -> Result<Parse<'a, ()>, ParseError> {
     let t1 = source.trim_start_matches(' ');
     if !t1.starts_with(literal) {
-        return  Err(ParseError::ExpectedLiteral(literal.to_string(), t1.to_string()));
+        return Err(ParseError::ExpectedLiteral(
+            literal.to_string(),
+            t1.to_string(),
+        ));
     }
 
     let t2 = t1.strip_prefix(literal).unwrap();
     let t3 = t2.trim_start_matches(' ');
 
-    Ok(Parse{
+    Ok(Parse {
         rest: t3,
         result: (),
     })
 }
 
 fn parse_eol(source: &str) -> Result<Parse<()>, ParseError> {
-
     if source.len() == 0 {
-        Ok(Parse{
+        Ok(Parse {
             rest: source,
             result: (),
         })
@@ -216,7 +242,6 @@ fn parse_eol(source: &str) -> Result<Parse<()>, ParseError> {
         Err(ParseError::ExpectedEol(source.to_string()))
     }
 }
-
 
 #[derive(Debug, Error)]
 pub enum ParseError {
@@ -244,7 +269,7 @@ mod testing {
     #[test]
     fn test_parsing() {
         let tz: Tz = "America/New_York".parse().unwrap();
-        
+
         // UCT-5
         let now = tz.with_ymd_and_hms(2023, 2, 11, 12, 0, 0).unwrap();
 
@@ -268,38 +293,43 @@ mod testing {
             Utc.with_ymd_and_hms(2023, 2, 12, 2, 0, 0),
         );
 
-        run_test("today, 11am-12pm",
+        run_test(
+            "today, 11am-12pm",
             Utc.with_ymd_and_hms(2023, 2, 11, 16, 0, 0),
-            Utc.with_ymd_and_hms(2023, 2, 11, 17, 0, 0));
+            Utc.with_ymd_and_hms(2023, 2, 11, 17, 0, 0),
+        );
 
-        run_test("today, 12am-1am",
+        run_test(
+            "today, 12am-1am",
             Utc.with_ymd_and_hms(2023, 2, 11, 5, 0, 0),
-            Utc.with_ymd_and_hms(2023, 2, 11, 6, 0, 0));
+            Utc.with_ymd_and_hms(2023, 2, 11, 6, 0, 0),
+        );
 
-
-        run_test("today, 12:00am-01:30am",
+        run_test(
+            "today, 12:00am-01:30am",
             Utc.with_ymd_and_hms(2023, 2, 11, 5, 0, 0),
-            Utc.with_ymd_and_hms(2023, 2, 11, 6, 30, 0));
+            Utc.with_ymd_and_hms(2023, 2, 11, 6, 30, 0),
+        );
 
         // weird capitalization
-        run_test("today, 11Am-12PM",
+        run_test(
+            "today, 11Am-12PM",
             Utc.with_ymd_and_hms(2023, 2, 11, 16, 0, 0),
-            Utc.with_ymd_and_hms(2023, 2, 11, 17, 0, 0));
-
+            Utc.with_ymd_and_hms(2023, 2, 11, 17, 0, 0),
+        );
 
         // multi day span
-        run_test("today, 10am - tomorrow, 2pm",
+        run_test(
+            "today, 10am - tomorrow, 2pm",
             Utc.with_ymd_and_hms(2023, 2, 11, 15, 0, 0),
-            Utc.with_ymd_and_hms(2023, 2, 12, 19, 0, 0))
-
-
+            Utc.with_ymd_and_hms(2023, 2, 12, 19, 0, 0),
+        )
     }
-
 
     #[test]
     fn test_dst() {
         let tz: Tz = "America/New_York".parse().unwrap();
-                
+
         // UCT-5
         let now = tz.with_ymd_and_hms(2023, 3, 11, 12, 0, 0).unwrap();
         let (start, end) = parse(&now, "today, 10pm - tomorrow, 10am").expect("expected to parse");
@@ -308,13 +338,12 @@ mod testing {
         assert_eq!(d, Duration::hours(11));
     }
 
-
     #[test]
     fn test_parse_number() {
         let source = " - 10";
 
         let hyphen_parse = parse_literal(source, "-").expect("expected hyphen to parse");
-        let n_parse  = parse_number(hyphen_parse.rest).expect("expected number to parse");
+        let n_parse = parse_number(hyphen_parse.rest).expect("expected number to parse");
 
         assert_eq!(n_parse.result, 10);
 
