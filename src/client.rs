@@ -42,7 +42,7 @@ pub struct SchedulesResponse {
     pub more: bool,
     pub limit: i32,
     pub offset: i32,
-    pub total: Option<u64>,
+    pub total: u64,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -155,9 +155,7 @@ impl Client {
             let resp = self.add_common_headers(req).send().await?;
             let schedules = resp.json::<SchedulesResponse>().await?;
 
-            if let Some(total) = schedules.total {
-                pb.set_length(total)
-            }
+            pb.set_length(schedules.total);
             pb.inc(schedules.schedules.len() as u64);
 
             offset += schedules.limit;
