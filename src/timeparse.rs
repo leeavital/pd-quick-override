@@ -90,10 +90,9 @@ fn parse_time(base: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, P
     let hour_parse = parse_number(source)?;
     let mut rest = hour_parse.rest;
 
-    let colon_parse = parse_literal(rest, ":");
     let mut minute = Some(0);
-    if colon_parse.is_ok() {
-        rest = colon_parse.unwrap().rest;
+    if let Ok(colon_parse) = parse_literal(rest, ":"){
+        rest = colon_parse.rest;
         let minute_parse = parse_number(rest)?;
         
         minute = Some(minute_parse.result);
@@ -136,7 +135,7 @@ fn parse_meridiem(source: &str) -> Result<Parse<Meridiem>, ParseError> {
     Err(ParseError::IllegalMeridiem(String::from(source)))
 }
 
-fn parse_number<'a>(source: &'a str) -> Result<Parse<'a, u32>, ParseError> {
+fn parse_number(source: &str) -> Result<Parse<u32>, ParseError> {
     let schars = source.chars().take_while(|x| x.is_numeric()).count();
     if schars == 0 {
         return Err(ParseError::ExpectedNumber(source.to_string()));
