@@ -1,11 +1,10 @@
 
-use std::{path::{PathBuf}, error::Error, ops::Mul};
+use std::{path::{PathBuf}, error::Error};
 
-use chrono::{Utc, format::parse};
+use chrono::{Utc};
 
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
-use thiserror::__private::PathAsDisplay;
 use tokio::{join, io::{AsyncWriteExt, AsyncReadExt}};
 
 use crate::client::{self, User, Schedule};
