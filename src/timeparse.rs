@@ -1,34 +1,181 @@
+use std::borrow::Borrow;
+use std::cmp::min;
 use std::{error::Error, fmt::Display, ops::Add};
 
 #[allow(unused)]
 use chrono::TimeZone;
-use chrono::{Duration, DurationRound, Timelike};
+use chrono::{Duration, DurationRound, Timelike, Datelike};
 
 use chrono::{DateTime};
 use chrono_tz::Tz;
 
-// TODO: use references for DateTime wherever possible?
 
+struct Parse<'a, T> {
+    rest: &'a str,
+    result: T,
+}
+
+#[derive(PartialEq, Eq)]
+enum Meridiem {
+    Am, Pm 
+}
+
+// ranges come in the following forms:
+// <full-range> := <date> , <time> - <time>
+//                 | <date> <time> - <date> <time>
+//                 | <date> - <date> , <time-range>
+
+//  <date> := today
+//             | tomorrow
+//             |  <D:month>/<D:day>
+
+//  <time> :=  <D:hour> (am | pm)
+//             <D:hour>:<D:minute> (am | pm)
 pub fn parse(
     now: &DateTime<Tz>,
     range_str: &str,
 ) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
 
-    let range_parts: Vec<&str> = range_str.split(',').collect();
+    let lowered_string = range_str.to_lowercase();
 
-    if range_parts.len() == 2 {
-        let base = get_base_date(now, range_parts[0])?;
+    // TODO: no date clone?
 
-        return get_ranges_with_base(base, range_parts[1]);
+    let date_parse = parse_date(now.clone(), &lowered_string)?;
+    let comma_parse = parse_literal(date_parse.rest , ",")?;
+    let start_time_parse = parse_time(date_parse.result, comma_parse.rest)?;
+    let hyphen_parse = parse_literal(start_time_parse.rest, "-")?;
+    let end_time_parse = parse_time(date_parse.result, hyphen_parse.rest)?;
+
+    Ok((start_time_parse.result, end_time_parse.result))
+}
+
+fn parse_date(now: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, ParseError> {
+
+    if let Ok(parse) = parse_literal(source, "today") {
+        let today = now.duration_trunc(Duration::days(1)).unwrap();
+        return Ok(Parse { rest: parse.rest, result: today });
     }
 
-    Err(ParseError {
-        reason: ParseErrorReason::Other,
-        source: Some(String::from(range_str)),
+    if let Ok(parse) = parse_literal(source, "tomorrow") {
+        let today = now.duration_trunc(Duration::days(1)).unwrap();
+        let tomorrow= today.add(Duration::days(1));
+        return Ok(Parse { rest: parse.rest, result: tomorrow });
+    } 
+
+    if let Ok(parse) = parse_month_day_date(now, source) {
+        return Ok(parse);
+    }
+
+    return Err(ParseError { reason: 
+        ParseErrorReason::UnrecognizedDate,
+        source: Some(String::from(source)),
+    });
+}
+
+fn parse_month_day_date(now: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, ParseError> {
+
+    let month_parse = parse_number(source)?;
+    let slash_parse = parse_literal(month_parse.rest, "/")?;
+    let date_parse = parse_number(slash_parse.rest)?;
+
+    // TODO: year
+
+    let date = now.duration_trunc(Duration::days(1)).unwrap()
+        .with_month(month_parse.result).unwrap()
+        .with_day(date_parse.result)
+        .unwrap();
+
+    Ok(Parse { rest: date_parse.rest, result: date })
+}
+
+fn parse_time(base: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, ParseError> {
+    
+    let hour_parse = parse_number(source)?;
+    let mut rest = hour_parse.rest;
+
+    let colon_parse = parse_literal(rest, ":");
+    let mut minute = Some(0);
+    if colon_parse.is_ok() {
+        rest = colon_parse.unwrap().rest;
+        let minute_parse = parse_number(rest)?;
+        
+        minute = Some(minute_parse.result);
+        rest = minute_parse.rest;
+    }
+
+
+    let mut meridiem = Meridiem::Am;
+    if let Ok(meridiem_parse) = parse_meridiem(rest) {
+        meridiem = meridiem_parse.result;
+        rest = meridiem_parse.rest; 
+    }
+
+    let mut hour = hour_parse.result;
+    if hour == 12 && meridiem == Meridiem::Am {
+        hour = 0;
+    }
+
+    if hour != 12 && meridiem == Meridiem::Pm {
+        hour += 12;
+    }
+
+    // TODO: check bounds
+
+    let time = base.with_hour(hour)
+        .unwrap()
+        .with_minute(minute.unwrap_or(0))
+        .unwrap();
+
+    return Ok(Parse { rest: rest, result: time });
+}
+
+
+fn parse_number<'a>(source: &'a str) -> Result<Parse<'a, u32>, ParseError> {
+    let schars = source.chars().take_while(|x| x.is_numeric()).count();
+    if schars == 0 {
+        return Err(ParseError { reason: ParseErrorReason::IllegalTime, source: Some(String::from(source)) });
+    }
+
+    let n = source[0..schars].parse::<u32>();
+
+    return Ok(Parse { rest: &source[schars..source.len()], result: n.unwrap() });
+}
+
+fn parse_literal<'a>(source: &'a str, literal: &str) -> Result<Parse<'a, ()>, ParseError> {
+    let t1 = source.trim_start_matches(' ');
+    if !t1.starts_with(literal) {
+        return Err(ParseError { reason: ParseErrorReason::IllegalTime, source: Some(String::from(t1)) });
+    }
+
+    let t2 = t1.strip_prefix(literal).unwrap();
+    let t3 = t2.trim_start_matches(' ');
+
+    Ok(Parse{
+        rest: t3,
+        result: (),
     })
 }
 
-fn get_ranges_with_base(
+
+fn parse_meridiem(source: &str) -> Result<Parse<Meridiem>, ParseError> {
+
+    if let Ok(parse) = parse_literal(source, "am") {
+        return Ok(Parse { rest: parse.rest, result: Meridiem::Am });
+    }
+
+    if let Ok(parse) = parse_literal(source, "pm") {
+        return Ok(Parse { rest: parse.rest, result: Meridiem::Pm });
+    }
+
+    return Err(ParseError { 
+        reason: ParseErrorReason::Other, 
+        source: Some(String::from(source)),
+    });
+}
+
+
+// parse a string, of the form 10am-10pm into one date range
+fn get_single_range_with_base(
     base: DateTime<Tz>,
     range_parts: &str,
 ) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
@@ -100,7 +247,6 @@ fn get_base_date(now: &DateTime<Tz>, range_str: &str) -> Result<DateTime<Tz>, Pa
 
     if range_str.starts_with("today") {
         let base_date = now.duration_trunc(Duration::days(1)).unwrap();
-
         return Ok(base_date);
     }
 
@@ -189,5 +335,22 @@ mod testing {
             Utc.with_ymd_and_hms(2023, 2, 11, 16, 0, 0),
             Utc.with_ymd_and_hms(2023, 2, 11, 17, 0, 0));
 
+    }
+
+
+    #[test]
+    fn test_parse_number() {
+        let source = " - 10";
+
+        let hyphen_parse = parse_literal(source, "-").expect("expected hyphen to parse");
+        let n_parse  = parse_number(hyphen_parse.rest).expect("expected number to parse");
+
+        assert_eq!(n_parse.result, 10);
+
+        let tz: Tz = "America/New_York".parse().unwrap();
+        let now = tz.with_ymd_and_hms(2023, 2, 11, 12, 0, 0).unwrap();
+        parse_date(now, "today").expect("expected to parse date");
+        parse_date(now, "10/30").expect("expected date to parse");
+        parse_time(now, "10:30 am").expect("expected date to parse");
     }
 }
