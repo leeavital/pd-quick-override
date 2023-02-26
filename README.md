@@ -7,7 +7,9 @@
 This is a tool to quickly create pagerduty overrides from the command line.
 
 
+
 ## usage: create
+
 
 Create overrides for the current day:
 
@@ -22,12 +24,17 @@ Create an override for yourself:
 pd-quick-override create --me --at 'today, 4:30pm-5:30pm'
 ```
 
+
 Specify a timezone (`create` will default to your local timezone)
+
 
 ```
 pd-quick-override create --time-zone 'Europe/Paris --at 'today, 4:00pm-5:00pm'
 ```
 
+
 ## usage: reset-api-key
 
 Todo
+
+
