@@ -9,10 +9,14 @@ pub fn select<'a, T>(ss: &'a HashMap<String, &T>) -> io::Result<&'a T>
 where
     T: Clone,
 {
-    let mut subprocess = Command::new("fzf")
+    let mut subprocess = Command::new("fzf2")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .spawn()?;
+        .spawn()
+        .unwrap_or_else(|_| {
+            eprintln!("could not spawn fzf, is it installed? https://github.com/junegunn/fzf");
+            std::process::exit(1);
+        });
 
     let stdin = subprocess.stdin.as_mut().unwrap();
     for k  in ss.keys() {
