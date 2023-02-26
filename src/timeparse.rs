@@ -1,6 +1,5 @@
-use std::borrow::Borrow;
-use std::cmp::min;
-use std::{error::Error, fmt::Display, ops::Add};
+use std::{ops::Add};
+use thiserror::Error;
 
 #[allow(unused)]
 use chrono::TimeZone;
@@ -37,14 +36,19 @@ pub fn parse(
 ) -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
     let lowered_string = range_str.to_lowercase();
 
-    // TODO: no date clone?
+    return  parse_single_day_range(now.clone(), &lowered_string);
+}
 
-    let date_parse = parse_date(now.clone(), &lowered_string)?;
+
+fn parse_single_day_range(
+    now: DateTime<Tz>,
+    source: &str,
+)  -> Result<(DateTime<Tz>, DateTime<Tz>), ParseError> {
+    let date_parse = parse_date(now.clone(), &source)?;
     let comma_parse = parse_literal(date_parse.rest , ",")?;
     let start_time_parse = parse_time(date_parse.result, comma_parse.rest)?;
     let hyphen_parse = parse_literal(start_time_parse.rest, "-")?;
     let end_time_parse = parse_time(date_parse.result, hyphen_parse.rest)?;
-
     Ok((start_time_parse.result, end_time_parse.result))
 }
 
@@ -64,14 +68,10 @@ fn parse_date(now: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, Pa
         return Ok(parse);
     }
 
-    return Err(ParseError { reason: 
-        ParseErrorReason::UnrecognizedDate,
-        source: Some(String::from(source)),
-    });
+    return Err(ParseError::UnrecognizedDate(String::from(source)));
 }
 
 fn parse_month_day_date(now: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, ParseError> {
-
     let month_parse = parse_number(source)?;
     let slash_parse = parse_literal(month_parse.rest, "/")?;
     let date_parse = parse_number(slash_parse.rest)?;
@@ -87,7 +87,6 @@ fn parse_month_day_date(now: DateTime<Tz>, source: &str) -> Result<Parse<DateTim
 }
 
 fn parse_time(base: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, ParseError> {
-    
     let hour_parse = parse_number(source)?;
     let mut rest = hour_parse.rest;
 
@@ -117,8 +116,6 @@ fn parse_time(base: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, P
         hour += 12;
     }
 
-    // TODO: check bounds
-
     let time = base.with_hour(hour)
         .unwrap()
         .with_minute(minute.unwrap_or(0))
@@ -128,7 +125,6 @@ fn parse_time(base: DateTime<Tz>, source: &str) -> Result<Parse<DateTime<Tz>>, P
 }
 
 fn parse_meridiem(source: &str) -> Result<Parse<Meridiem>, ParseError> {
-
     if let Ok(parse) = parse_literal(source, "am") {
         return Ok(Parse { rest: parse.rest, result: Meridiem::Am });
     }
@@ -137,16 +133,13 @@ fn parse_meridiem(source: &str) -> Result<Parse<Meridiem>, ParseError> {
         return Ok(Parse { rest: parse.rest, result: Meridiem::Pm });
     }
 
-    return Err(ParseError { 
-        reason: ParseErrorReason::Other, 
-        source: Some(String::from(source)),
-    });
+    Err(ParseError::IllegalMeridiem(String::from(source)))
 }
 
 fn parse_number<'a>(source: &'a str) -> Result<Parse<'a, u32>, ParseError> {
     let schars = source.chars().take_while(|x| x.is_numeric()).count();
     if schars == 0 {
-        return Err(ParseError { reason: ParseErrorReason::IllegalTime, source: Some(String::from(source)) });
+        return Err(ParseError::ExpectedNumber(source.to_string()));
     }
 
     let n = source[0..schars].parse::<u32>();
@@ -157,7 +150,7 @@ fn parse_number<'a>(source: &'a str) -> Result<Parse<'a, u32>, ParseError> {
 fn parse_literal<'a>(source: &'a str, literal: &str) -> Result<Parse<'a, ()>, ParseError> {
     let t1 = source.trim_start_matches(' ');
     if !t1.starts_with(literal) {
-        return Err(ParseError { reason: ParseErrorReason::IllegalTime, source: Some(String::from(t1)) });
+        return  Err(ParseError::ExpectedLiteral(literal.to_string(), t1.to_string()));
     }
 
     let t2 = t1.strip_prefix(literal).unwrap();
@@ -170,31 +163,19 @@ fn parse_literal<'a>(source: &'a str, literal: &str) -> Result<Parse<'a, ()>, Pa
 }
 
 
-#[derive(Debug)]
-pub enum ParseErrorReason {
-    UnrecognizedDate,
-    UnrecognizedTimeRange,
-    IllegalTime,
-    Other,
-}
+#[derive(Debug, Error)]
+pub enum ParseError {
+    #[error("expected tomorrow/today/date, but got {0}")]
+    UnrecognizedDate(String),
 
-#[derive(Debug)]
-pub struct ParseError {
-    reason: ParseErrorReason,
-    source: Option<String>,
-}
-impl Error for ParseError {}
+    #[error("illegal value for meridiem, expected am/pm, but got {0}")]
+    IllegalMeridiem(String),
 
-impl Display for ParseError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("encountered error code: {:?}", self.reason))?;
+    #[error("expected literal {0} but got {1}")]
+    ExpectedLiteral(String, String),
 
-        if let Some(s) = self.source.as_ref() {
-            f.write_fmt(format_args!(" on input {:?}", s))?
-        }
-
-        Ok(())
-    }
+    #[error("expected number, got {0}")]
+    ExpectedNumber(String),
 }
 
 #[cfg(test)]

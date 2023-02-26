@@ -53,7 +53,7 @@ async fn main() {
             tz.timestamp_opt(now, 0).unwrap();
             let (from, to) = timeparse::parse(&tz.timestamp_opt(now, 0).unwrap(), at.as_str())
                 .unwrap_or_else(|e| {
-                    println!("cannot parse: {}", e);
+                    println!("cannot parse: {:?}", e);
                     std::process::exit(1);
                 });
 
