@@ -1,15 +1,15 @@
+use std::{error::Error, path::PathBuf};
 
-use std::{path::{PathBuf}, error::Error};
-
-use chrono::{Utc};
+use chrono::Utc;
 
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use serde::{Deserialize, Serialize};
-use tokio::{join, io::{AsyncWriteExt, AsyncReadExt}};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    join,
+};
 
-use crate::client::{self, User, Schedule};
-
-
+use crate::client::{self, Schedule, User};
 
 #[derive(Deserialize, Serialize, Debug)]
 pub struct Serialized {
@@ -18,23 +18,26 @@ pub struct Serialized {
     pub updated_at: i64, // in seconds
 }
 
-pub struct  Database<'a> {
+pub struct Database<'a> {
     client: &'a client::Client,
     pub storage: Serialized,
 }
 
-
-impl <'a> Database<'a> {
-    pub async fn load(client:  &'a client::Client) -> Result<Database<'a>, Box<dyn Error>> {
+impl<'a> Database<'a> {
+    pub async fn load(client: &'a client::Client) -> Result<Database<'a>, Box<dyn Error>> {
         let storage_dir = Self::get_storage_dir();
         if !storage_dir.exists() {
             std::fs::create_dir_all(storage_dir).expect("could not create directory");
         }
 
         let storage_file = Self::get_storage_file();
-        let mut db = Database{
+        let mut db = Database {
             client,
-            storage: Serialized { users: Vec::new(), schedules: Vec::new(), updated_at: 0 },
+            storage: Serialized {
+                users: Vec::new(),
+                schedules: Vec::new(),
+                updated_at: 0,
+            },
         };
         if !storage_file.exists() {
             db.do_remote_load().await?;
@@ -47,7 +50,6 @@ impl <'a> Database<'a> {
     }
 
     async fn do_remote_load(&mut self) -> Result<(), Box<dyn Error>> {
-
         println!("loading all users and schedules from Pagerduty. This will take a while, but should only happen once");
 
         let progress = MultiProgress::new();
@@ -59,7 +61,6 @@ impl <'a> Database<'a> {
             .with_prefix("loading schedules")
             .with_style(ProgressStyle::with_template("Loading Schedules: [{elapsed_precise}] {bar:40.cyan/blue} {pos:>7}/{len:7} {msg}").unwrap());
 
-
         let users = self.client.get_users(users_progress);
         let schedules = self.client.get_schedules(schedule_progress);
 
@@ -68,8 +69,10 @@ impl <'a> Database<'a> {
         let users = r_users?;
         let schedules = r_schedules?;
 
-        self.storage = Serialized{
-            schedules, users, updated_at: Utc::now().timestamp(),
+        self.storage = Serialized {
+            schedules,
+            users,
+            updated_at: Utc::now().timestamp(),
         };
 
         self.write_to_disk().await?;
@@ -78,16 +81,16 @@ impl <'a> Database<'a> {
     }
 
     fn get_storage_file() -> PathBuf {
-        let mut dir = Self::get_storage_dir(); 
+        let mut dir = Self::get_storage_dir();
         dir.push("storage.json");
-        
+
         dir
     }
 
     fn get_storage_dir() -> PathBuf {
         let mut home = dirs::home_dir().expect("could not find home directory");
         home.push(".pd-quick-override");
-        
+
         home
     }
 
@@ -109,12 +112,16 @@ impl <'a> Database<'a> {
         let mut out = String::new();
         f.read_to_string(&mut out).await?;
 
-        let parsed : Serialized = serde_json::from_str(out.as_str())?;
+        let parsed: Serialized = serde_json::from_str(out.as_str())?;
 
-        println!("loaded cached schedules and users from {}, last updated at {}", storage_file.display(), parsed.updated_at);
+        println!(
+            "loaded cached schedules and users from {}, last updated at {}",
+            storage_file.display(),
+            parsed.updated_at
+        );
 
         self.storage = parsed;
-        
+
         Ok(())
     }
 }
